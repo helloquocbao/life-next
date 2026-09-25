@@ -1,0 +1,17 @@
+{
+  "name": "deathnote-frontend",
+  "private": true,
+  "description": "LifeNext \u2014 3 \u1ee9ng d\u1ee5ng web (Owner, Trustee, Admin) + c\u00e1c package d\u00f9ng chung",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "gen:api": "pnpm --filter @deathnote/api gen"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.3",
+    "typescript": "~5.9.3"
+  },
+  "packageManager": "pnpm@12.5.1"
+}

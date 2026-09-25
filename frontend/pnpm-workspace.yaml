@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Chỉ cho phép các gói cần build script (esbuild tải binary theo nền tảng).
+allowBuilds:
+  esbuild: true

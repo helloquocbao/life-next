@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DeathNote.Application.Contracts/DeathNote.Application.Contracts.csproj" />
+    <Project Path="src/DeathNote.Application/DeathNote.Application.csproj" />
+    <Project Path="src/DeathNote.Domain.Shared/DeathNote.Domain.Shared.csproj" />
+    <Project Path="src/DeathNote.Domain/DeathNote.Domain.csproj" />
+    <Project Path="src/DeathNote.EntityFrameworkCore/DeathNote.EntityFrameworkCore.csproj" />
+    <Project Path="src/DeathNote.HttpApi.Host/DeathNote.HttpApi.Host.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/DeathNote.Application.Tests/DeathNote.Application.Tests.csproj" />
+    <Project Path="test/DeathNote.Domain.Tests/DeathNote.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

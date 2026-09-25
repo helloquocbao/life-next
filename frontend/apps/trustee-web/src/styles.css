@@ -1,0 +1,37 @@
+/* Kiểu dáng toàn cục tối thiểu — phần còn lại dùng design token của Ant Design (theme "consumer": chữ to, nút to). */
+html, body, #root { margin: 0; min-height: 100%; background: #f6f8f7; }
+body { -webkit-font-smoothing: antialiased; }
+.page { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+.muted { color: #6b7a80; }
+.lead { font-size: 22px; line-height: 1.45; font-weight: 600; margin: 0; }
+.big-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.big-actions .ant-btn { flex: 1 1 240px; height: 64px; font-size: 18px; }
+.secret-mask { letter-spacing: 3px; }
+.field-row { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; padding: 6px 0; border-bottom: 1px dashed #e3e8e6; }
+.field-row:last-child { border-bottom: none; }
+.field-value { word-break: break-word; white-space: pre-wrap; }
+@media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+/* Thư mở đầu — toàn màn hình, typography lớn, nền giấy dịu mắt. */
+.letter-screen { position: fixed; inset: 0; z-index: 1000; background: #fbfaf6; overflow-y: auto; }
+.letter-inner { max-width: 680px; margin: 0 auto; padding: 64px 24px 96px; }
+.letter-body { font-family: Georgia, "Times New Roman", serif; font-size: 22px; line-height: 1.75; white-space: pre-wrap; color: #1f2a2e; }
+
+/* Chỉ hiện khi in (vd. giá trị bí mật không che) / chỉ hiện trên màn hình. */
+.print-only { display: none; }
+
+@media print {
+  .no-print, .screen-only, .ant-layout-header, .ant-alert-banner { display: none !important; }
+  .print-only { display: inline !important; }
+  .page { max-width: none; padding: 0; }
+  .ant-card { break-inside: avoid; box-shadow: none !important; }
+  html, body, #root { background: #fff; }
+}
+
+/* Tiêu đề & số liệu lớn dùng font serif (theo bản mockup UI), phần còn lại giữ sans mặc định. */
+h1, h2, h3, h4, h5,
+.ant-typography h1, .ant-typography h2, .ant-typography h3, .ant-typography h4, .ant-typography h5,
+.ant-card-head-title, .ant-statistic-content, .font-serif {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif !important;
+  letter-spacing: -0.01em;
+}

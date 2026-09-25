@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\common.props" />
+  <PropertyGroup>
+    <RootNamespace>DeathNote</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DeathNote.Domain\DeathNote.Domain.csproj" />
+    <ProjectReference Include="..\DeathNote.Application.Contracts\DeathNote.Application.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Ddd.Application" Version="$(AbpVersion)" />
+    <PackageReference Include="Volo.Abp.Account.Application" Version="$(AbpVersion)" />
+  </ItemGroup>
+</Project>

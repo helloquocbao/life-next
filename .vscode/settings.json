@@ -1,0 +1,7 @@
+{
+  // Dự án dùng tiếng Việt trong comment/chuỗi văn bản. Tắt cảnh báo "ký tự không phải ASCII cơ bản"
+  // của VSCode cho riêng tiếng Việt — vẫn giữ cảnh báo cho các ngôn ngữ/ký tự lạ khác (bảo mật).
+  "editor.unicodeHighlight.allowedLocales": {
+    "vi": true
+  }
+}

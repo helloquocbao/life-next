@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Công cụ AI hỗ trợ — không thuộc mã nguồn dự án
+.claude/
+
+# .NET
+**/bin/
+**/obj/
+backend/**/Logs/
+backend/src/DeathNote.HttpApi.Host/App_Data/
+backend/src/DeathNote.HttpApi.Host/wwwroot/libs/
+*.user
+.vs/
+
+# Node / pnpm / Vite
+**/node_modules/
+frontend/**/dist/
+.turbo/
+*.local
+
+# IDE khác (giữ lại .vscode/settings.json — cấu hình chung của dự án)
+.idea/

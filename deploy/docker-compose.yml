@@ -1,0 +1,41 @@
+# =============================================================================
+# Death Note — hạ tầng phát triển cục bộ (local dev infrastructure)
+# -----------------------------------------------------------------------------
+# Chạy:  docker compose -f deploy/docker-compose.yml up -d
+#
+# - postgres : CSDL chính. Chỉ chứa METADATA + CIPHERTEXT, không bao giờ có
+#              nội dung vault ở dạng rõ (zero-knowledge).
+# - mailpit  : SMTP giả lập để xem email nhắc check-in / lời mời trustee
+#              tại http://localhost:8026
+#
+# Cổng được chọn lệch chuẩn (55433, 1026, 8026) để không đụng các dịch vụ
+# khác đang chạy trên máy dev.
+# =============================================================================
+name: deathnote
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: DeathNote
+    ports:
+      - "55433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1026:1025"   # SMTP
+      - "8026:8025"   # Web UI xem thư
+
+volumes:
+  pgdata:

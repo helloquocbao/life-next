@@ -1,0 +1,18 @@
+<!--
+  Thuộc tính build dùng chung cho mọi project backend Death Note.
+  - net10.0 + C# latest
+  - Nullable bật để bắt lỗi null ngay từ lúc biên dịch
+  - Tắt cảnh báo thiếu XML doc (CS1591) vì comment nghiệp vụ được viết trực tiếp trong code
+-->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <AbpVersion>10.6.1</AbpVersion>
+    <EfCoreVersion>10.0.9</EfCoreVersion>
+  </PropertyGroup>
+</Project>

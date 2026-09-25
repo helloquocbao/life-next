@@ -1,0 +1,9 @@
+bin/
+obj/
+Logs/
+*.user
+.vs/
+.idea/
+src/DeathNote.HttpApi.Host/App_Data/
+src/DeathNote.HttpApi.Host/wwwroot/libs/
+node_modules/

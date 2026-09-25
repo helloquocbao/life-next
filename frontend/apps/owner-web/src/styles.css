@@ -1,0 +1,31 @@
+/* Kiểu dáng toàn cục tối thiểu — phần còn lại dùng design token của Ant Design. */
+html, body, #root { margin: 0; min-height: 100%; background: #f6f8f7; }
+body { -webkit-font-smoothing: antialiased; }
+.page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
+.page-narrow { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+.muted { color: #6b7a80; }
+.recovery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.recovery-grid > div { border: 1px dashed #c9d3cf; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Menlo, monospace; background: #fff; }
+.secret-mask { letter-spacing: 3px; }
+@media (max-width: 640px) { .recovery-grid { grid-template-columns: repeat(2, 1fr); } }
+@media print {
+  .no-print, .ant-layout-header, .ant-layout-footer { display: none !important; }
+  .page, .page-narrow { max-width: none; padding: 0; }
+}
+
+/* Tiêu đề & số liệu lớn dùng font serif (theo bản mockup UI), phần còn lại giữ sans mặc định. */
+h1, h2, h3, h4, h5,
+.ant-typography h1, .ant-typography h2, .ant-typography h3, .ant-typography h4, .ant-typography h5,
+.ant-card-head-title, .ant-statistic-content, .font-serif {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif !important;
+  letter-spacing: -0.01em;
+}
+
+/* Nhãn viết hoa nhỏ trên đầu mỗi khối thông tin — theo mẫu UI ("CHECK-IN TIẾP THEO", "MỨC ĐỘ SẴN SÀNG"). */
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #7A776F;
+}
