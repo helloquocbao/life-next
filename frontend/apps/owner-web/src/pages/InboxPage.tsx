@@ -10,8 +10,8 @@ import { useParams, useNavigate } from 'react-router';
 import { Button, Card, Flex, Typography } from 'antd';
 import { ArrowLeftOutlined, LockOutlined, PrinterOutlined } from '@ant-design/icons';
 import { ErrorAlert, FullPageSpin, LegalNotice, formatDateTime } from '@deathnote/ui';
-import { PassphraseForm } from '../components/PassphraseForm';
-import { useKeyring } from '../lib/api-hooks';
+import { PassphraseForm } from '../components/trustee/PassphraseForm';
+import { useKeyring } from '../lib/trusteePortalHooks';
 import { openInboxWithPassphrase } from '../lib/inbox';
 import { useInboxSession } from '../session/inboxSession';
 import { LetterScreen } from './inbox/LetterScreen';
@@ -29,30 +29,32 @@ export function InboxPage() {
   const lock = useInboxSession((s) => s.lock);
 
   if (keyring.isLoading) return <FullPageSpin />;
-  if (keyring.error) return <ErrorAlert error={keyring.error} />;
+  if (keyring.error) return <div className="page-trustee"><ErrorAlert error={keyring.error} /></div>;
 
   // Bước 0: chưa mở → nhập passphrase.
   if (!inbox)
     return (
-      <Card>
-        <Typography.Title level={3} style={{ marginTop: 0 }}>Mở hộp nhận</Typography.Title>
-        <Typography.Paragraph>
-          Nhập passphrase khoá cá nhân bạn đã tạo khi nhận vai trò. Việc ghép khoá và giải mã diễn ra ngay trên
-          trình duyệt này — PICO không đọc được nội dung.
-        </Typography.Paragraph>
-        <PassphraseForm
-          submitText="Mở hộp nhận"
-          hint="Có thể mất vài giây."
-          onSubmit={async (pass, setProgress) => {
-            const opened = await openInboxWithPassphrase(trusteeId, keyring.data, pass, setProgress);
-            setInbox(trusteeId, opened);
-          }}
-        />
-        <Button type="link" icon={<ArrowLeftOutlined />} style={{ paddingLeft: 0, marginTop: 16 }} onClick={() => navigate('/')}>
-          Về trang chính
-        </Button>
-        <LegalNotice style={{ marginTop: 16 }} />
-      </Card>
+      <div className="page-trustee">
+        <Card>
+          <Typography.Title level={3} style={{ marginTop: 0 }}>Mở hộp nhận</Typography.Title>
+          <Typography.Paragraph>
+            Nhập passphrase khoá cá nhân bạn đã tạo khi nhận vai trò. Việc ghép khoá và giải mã diễn ra ngay trên
+            trình duyệt này — PICO không đọc được nội dung.
+          </Typography.Paragraph>
+          <PassphraseForm
+            submitText="Mở hộp nhận"
+            hint="Có thể mất vài giây."
+            onSubmit={async (pass, setProgress) => {
+              const opened = await openInboxWithPassphrase(trusteeId, keyring.data, pass, setProgress);
+              setInbox(trusteeId, opened);
+            }}
+          />
+          <Button type="link" icon={<ArrowLeftOutlined />} style={{ paddingLeft: 0, marginTop: 16 }} onClick={() => navigate('/assignments')}>
+            Về Hồ sơ tôi giữ giúp
+          </Button>
+          <LegalNotice style={{ marginTop: 16 }} />
+        </Card>
+      </div>
     );
 
   const letter = inbox.grant.letter?.trim();
@@ -64,12 +66,12 @@ export function InboxPage() {
   const decrypted = inbox.items.flatMap((i) => (i.data ? [{ id: i.id, data: i.data }] : []));
 
   return (
-    <>
+    <div className="page-trustee">
       <Flex justify="space-between" align="center" wrap gap={8} className="no-print" style={{ marginBottom: 16 }}>
-        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>Trang chính</Button>
+        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/assignments')}>Hồ sơ tôi giữ giúp</Button>
         <Flex gap={8}>
           <Button icon={<PrinterOutlined />} onClick={() => window.print()}>Xuất PDF</Button>
-          <Button icon={<LockOutlined />} onClick={() => { lock(); navigate('/'); }}>Khoá lại</Button>
+          <Button icon={<LockOutlined />} onClick={() => { lock(); navigate('/assignments'); }}>Khoá lại</Button>
         </Flex>
       </Flex>
 
@@ -90,6 +92,6 @@ export function InboxPage() {
       <ItemDetails items={inbox.items} />
 
       <LegalNotice style={{ marginTop: 24 }} />
-    </>
+    </div>
   );
 }

@@ -50,10 +50,17 @@ public class OwnerProfile : FullAuditedAggregateRoot<Guid>
     /// <summary>Owner đã xác nhận đã cất giữ 12 từ khôi phục (recovery kit).</summary>
     public bool RecoveryKitConfirmed { get; private set; }
     /// <summary>
-    /// Đã bật xác thực hai lớp (TOTP) cho check-in. Khi bật, check-in từ web phải kèm mã 6 số
-    /// (tài liệu: "check-in từ web bắt xác thực hai lớp").
+    /// Đã bật xác thực hai lớp (TOTP) khi MỞ KÉT. Khi bật, sau khi giải mã VaultKey bằng passphrase
+    /// trên trình duyệt, owner còn phải nhập thêm mã 6 số mới thực sự xem được nội dung — một lớp
+    /// phòng vệ bổ sung tại đúng thời điểm nhạy cảm nhất (đọc dữ liệu đã giải mã).
     /// </summary>
-    public bool CheckInTwoFactorEnabled { get; private set; }
+    public bool VaultUnlockTwoFactorEnabled { get; private set; }
+
+    /// <summary>
+    /// Tuỳ chọn TRẢ PHÍ ĐỊNH KỲ: khi owner đến hạn (Missed), ngoài email/SMS tự động, nhân viên PICO
+    /// sẽ chủ động gọi điện liên hệ thêm. MVP: chỉ lưu cờ bật/tắt, chưa có luồng thanh toán/vận hành thật.
+    /// </summary>
+    public bool StaffContactOnMissed { get; private set; }
 
     /// <summary>
     /// Nonce của link check-in qua email/SMS. Mỗi lần gửi nhắc sẽ sinh nonce mới và link cũ hết hiệu lực,
@@ -151,7 +158,17 @@ public class OwnerProfile : FullAuditedAggregateRoot<Guid>
 
     public void ConfirmRecoveryKit() => RecoveryKitConfirmed = true;
 
-    public void SetCheckInTwoFactor(bool enabled) => CheckInTwoFactorEnabled = enabled;
+    public void SetVaultUnlockTwoFactor(bool enabled) => VaultUnlockTwoFactorEnabled = enabled;
+
+    public void SetStaffContactOnMissed(bool enabled) => StaffContactOnMissed = enabled;
+
+    /// <summary>
+    /// Owner quên cả mật khẩu chính lẫn 12 từ khôi phục — từ bỏ két cũ để tạo két mới.
+    /// Chỉ reset lại "đã xác nhận cất giữ recovery kit" (két mới sẽ có bộ 12 từ mới, cần xác nhận lại);
+    /// không đổi trạng thái vòng đời hay danh sách người được uỷ quyền — họ vẫn được owner tin tưởng,
+    /// chỉ là owner cần phân mảnh khoá lại từ đầu khi có két mới.
+    /// </summary>
+    public void ResetForNewVault() => RecoveryKitConfirmed = false;
 
     // =====================================================================
     //  Chuyển trạng thái do HỆ THỐNG thực hiện (background worker / quy trình mở)

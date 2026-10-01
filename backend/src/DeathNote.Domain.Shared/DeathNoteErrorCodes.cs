@@ -38,4 +38,9 @@ public static class DeathNoteErrorCodes
     public const string ReleaseNotYetReleased = "DeathNote:03009";
     public const string EvidenceTooLarge = "DeathNote:03010";
     public const string ReleaseClosed = "DeathNote:03011";
+
+    public const string EmailTemplateNotFound = "DeathNote:04001";
+    public const string EmailTemplateUnknownPlaceholder = "DeathNote:04002";
+    public const string EmailTemplateMissingContent = "DeathNote:04003";
+    public const string EmailSendFailed = "DeathNote:04004";
 }

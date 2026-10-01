@@ -25,8 +25,11 @@ public class Trustee : FullAuditedAggregateRoot<Guid>
     /// <summary>Khoá công khai X25519 của trustee (base64) — owner dùng để niêm phong mảnh khoá/grant.</summary>
     public string? PublicKey { get; private set; }
 
-    /// <summary>SHA-256 của token mời. Token gốc chỉ nằm trong email mời, server không lưu.</summary>
-    public string InvitationTokenHash { get; private set; } = default!;
+    /// <summary>
+    /// SHA-256 của token mời. Token gốc chỉ nằm trong email mời, server không lưu. Null khi ở trạng
+    /// thái NotInvitedYet — chưa từng gửi lời mời nên chưa có token nào để so khớp.
+    /// </summary>
+    public string? InvitationTokenHash { get; private set; }
     public DateTime InvitedAt { get; private set; }
     public DateTime? AcceptedAt { get; private set; }
 
@@ -36,12 +39,17 @@ public class Trustee : FullAuditedAggregateRoot<Guid>
 
     protected Trustee() { }
 
+    /// <summary>
+    /// Chỉ tạo bản ghi — CHƯA gửi lời mời (owner không muốn người thân biết trước). Trạng thái bắt đầu
+    /// ở NotInvitedYet; lời mời thật sự chỉ gửi khi owner bấm "Gửi lời mời ngay" hoặc khi hệ thống tự
+    /// động gửi lúc owner bị Missed — xem <see cref="IssueInvitationToken"/>.
+    /// </summary>
     public Trustee(Guid id, Guid ownerId, string displayName, string email, string? phone,
         string? relationship, TrusteeRole role, DateTime now) : base(id)
     {
         OwnerId = ownerId;
         Update(displayName, email, phone, relationship, role);
-        Status = TrusteeStatus.Pending;
+        Status = TrusteeStatus.NotInvitedYet;
         InvitedAt = now;
     }
 
@@ -54,7 +62,10 @@ public class Trustee : FullAuditedAggregateRoot<Guid>
         Role = role;
     }
 
-    /// <summary>Sinh token mời mới (dùng khi mời lần đầu hoặc gửi lại). Trả về token gốc để đưa vào email.</summary>
+    /// <summary>
+    /// Sinh token mời mới (dùng khi mời lần đầu — kể cả từ NotInvitedYet — hoặc gửi lại). Trả về token
+    /// gốc để đưa vào email; luôn đưa trạng thái về Pending (lời mời đã thực sự được gửi).
+    /// </summary>
     public string IssueInvitationToken(DateTime now)
     {
         if (Status == TrusteeStatus.Confirmed) throw new BusinessException(DeathNoteErrorCodes.InvitationAlreadyAccepted);
@@ -62,6 +73,7 @@ public class Trustee : FullAuditedAggregateRoot<Guid>
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
         InvitationTokenHash = HashToken(token);
         InvitedAt = now;
+        Status = TrusteeStatus.Pending;
         return token;
     }
 

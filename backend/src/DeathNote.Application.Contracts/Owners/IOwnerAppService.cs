@@ -17,10 +17,18 @@ public interface IOwnerAppService : IApplicationService
     Task PauseAsync(PauseInput input);
     Task ResumeAsync();
     Task ConfirmRecoveryKitAsync();
+    Task SetStaffContactOnMissedAsync(SetStaffContactOnMissedInput input);
     Task<List<HeartbeatDto>> GetHeartbeatsAsync();
     Task<PagedResultDto<AuditEventDto>> GetActivityAsync(GetActivityInput input);
     Task<DryRunDto> GetDryRunAsync();
     Task<TwoFactorSetupDto> GetTwoFactorSetupAsync();
     Task EnableTwoFactorAsync(EnableTwoFactorInput input);
     Task DisableTwoFactorAsync(EnableTwoFactorInput input);
+    /// <summary>Kiểm tra mã 2FA ở bước mở két (sau khi passphrase đã giải mã VaultKey trên trình duyệt).</summary>
+    Task<bool> VerifyVaultUnlockCodeAsync(EnableTwoFactorInput input);
+    /// <summary>
+    /// Tắt 2FA khi mất thiết bị xác thực — KHÔNG cần mã 6 số. Chỉ gọi được sau khi trình duyệt đã tự
+    /// xác minh 12 từ khôi phục thành công (xem RecoveryTwoFactorModal.tsx phía frontend).
+    /// </summary>
+    Task DisableTwoFactorViaRecoveryAsync();
 }

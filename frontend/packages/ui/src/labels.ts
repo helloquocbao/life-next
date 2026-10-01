@@ -1,4 +1,4 @@
-/** Nhãn tiếng Việt cho mọi enum — một nguồn duy nhất cho cả 3 ứng dụng. */
+/** Nhãn tiếng Việt cho mọi enum — một nguồn duy nhất cho cả App (Owner+Trustee) lẫn Admin Console. */
 import type { AuditActorType, CheckInChannel, ContactResponse, EvidenceKind, LifecycleState, ReleaseReason, ReleaseStatus, ReviewDecision, RiskSeverity, TrusteeRole, TrusteeStatus } from '@deathnote/api';
 
 export const lifecycleStateLabel: Record<LifecycleState, string> = {
@@ -32,8 +32,8 @@ export const trusteeRoleHint: Record<TrusteeRole, string> = {
   2: 'Có thể báo "không liên lạc được" và gửi giấy tờ chứng minh, nhưng không có quyền tự quyết định mở.',
 };
 
-export const trusteeStatusLabel: Record<TrusteeStatus, string> = { 0: 'Chờ xác nhận', 1: 'Đã xác nhận', 2: 'Không phản hồi' };
-export const trusteeStatusColor: Record<TrusteeStatus, string> = { 0: 'gold', 1: 'green', 2: 'red' };
+export const trusteeStatusLabel: Record<TrusteeStatus, string> = { 0: 'Chờ xác nhận', 1: 'Đã xác nhận', 2: 'Không phản hồi', 3: 'Chưa gửi lời mời' };
+export const trusteeStatusColor: Record<TrusteeStatus, string> = { 0: 'gold', 1: 'green', 2: 'red', 3: 'default' };
 
 export const contactResponseLabel: Record<ContactResponse, string> = { 0: 'Vẫn liên lạc được', 1: 'Không liên lạc được' };
 
@@ -78,11 +78,15 @@ export const auditActionLabel: Record<string, string> = {
   'owner.resumed': 'Tắt chế độ tạm dừng',
   'owner.veto': 'Owner phủ quyết — huỷ tiến trình',
   'owner.2fa_enabled': 'Bật xác thực hai lớp',
+  'owner.2fa_disabled_via_recovery': 'Tắt xác thực hai lớp bằng 12 từ khôi phục',
+  'owner.staff_contact_preference_changed': 'Đổi tuỳ chọn nhân viên liên hệ khi đến hạn',
   'vault.initialized': 'Tạo két dữ liệu',
   'vault.item_created': 'Thêm hạng mục',
   'vault.item_updated': 'Sửa hạng mục',
   'vault.item_deleted': 'Xoá hạng mục',
   'vault.keys_distributed': 'Phân mảnh khoá & phân bổ',
+  'vault.abandoned': 'Từ bỏ két cũ, tạo két mới',
+  'trustee.added': 'Thêm người được uỷ quyền (chưa gửi lời mời)',
   'trustee.invited': 'Mời người được uỷ quyền',
   'trustee.updated': 'Cập nhật người được uỷ quyền',
   'trustee.removed': 'Xoá người được uỷ quyền',
@@ -102,4 +106,6 @@ export const auditActionLabel: Record<string, string> = {
   'release.rejected': 'Từ chối yêu cầu mở',
   'release.cancelled': 'Huỷ yêu cầu mở',
   'release.data_accessed': 'Mở hộp nhận',
+  'admin.email_template_updated': 'Sửa mẫu email',
+  'admin.email_template_reset': 'Khôi phục mẫu email mặc định',
 };

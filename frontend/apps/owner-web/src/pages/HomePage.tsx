@@ -13,7 +13,7 @@ import { Alert, Button, Card, Col, Flex, Progress, Row, Space, Statistic, Typogr
 import { ArrowRightOutlined, BarChartOutlined, DownOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { LifecycleState, ReleaseStatus, type OwnerStatusDto } from '@deathnote/api';
 import {
-  ErrorAlert, FullPageSpin, businessRemaining, colors, formatDateTime, formatRelative, parseUtc,
+  ErrorAlert, FullPageSpin, SplitRow, businessRemaining, colors, formatDateTime, formatRelative, parseUtc,
   releaseReasonLabel, releaseStatusLabel,
 } from '@deathnote/ui';
 import { CheckInButton } from '../components/CheckInButton';
@@ -24,7 +24,7 @@ import { useHomeTour } from '../lib/useHomeTour';
 
 /** Việc nên làm tiếp → trang tương ứng, viết lại bằng ngôn ngữ đời thường (không thuật ngữ kỹ thuật). */
 const NEXT_ACTION_LINK: Record<string, { to: string; cta: string; plain: string }> = {
-  vault: { to: '/onboarding', cta: 'Bắt đầu', plain: 'Tạo hộp thông tin của bạn' },
+  vault: { to: '/vault', cta: 'Bắt đầu', plain: 'Tạo hộp thông tin của bạn' },
   recovery_kit: { to: '/settings?tab=security', cta: 'Xác nhận', plain: 'Xác nhận bạn đã cất bản dự phòng an toàn' },
   first_item: { to: '/vault', cta: 'Thêm ngay', plain: 'Cất thông tin đầu tiên của bạn' },
   five_items: { to: '/assets', cta: 'Trả lời vài câu hỏi', plain: 'Cho chúng tôi biết thêm về tài sản của bạn' },
@@ -77,7 +77,7 @@ export function HomePage() {
                   big={due ? (due.overdue ? `+${due.text}` : due.text) : '—'}
                   small={due?.overdue ? 'đã quá hạn' : 'đến lần xác nhận tiếp theo'} />
                 <span data-tour="checkin-button">
-                  <CheckInButton twoFactor={!!s.checkInTwoFactorEnabled} danger={alarming}
+                  <CheckInButton danger={alarming}
                     label={state === LifecycleState.Active ? 'Tôi vẫn ổn' : 'Tôi vẫn ổn — huỷ ngay'} />
                 </span>
                 <Typography.Text type="secondary" style={{ textAlign: 'center' }}>
@@ -93,13 +93,12 @@ export function HomePage() {
         <div data-tour="next-action">
           {state !== LifecycleState.Released && (next ? (
             <Card styles={{ body: { padding: 20 } }} style={{ borderColor: colors.primary, borderWidth: 1.5 }}>
-              <Flex justify="space-between" align="center" gap={16} wrap>
-                <div>
+              <SplitRow align="center" gap={16}
+                left={<>
                   <div className="eyebrow">Việc tiếp theo</div>
                   <Typography.Text strong style={{ fontSize: 17, display: 'block', marginTop: 4 }}>{next.plain}</Typography.Text>
-                </div>
-                <Link to={next.to}><Button type="primary" size="large" icon={<ArrowRightOutlined />}>{next.cta}</Button></Link>
-              </Flex>
+                </>}
+                right={<Link to={next.to}><Button type="primary" size="large" icon={<ArrowRightOutlined />}>{next.cta}</Button></Link>} />
             </Card>
           ) : (
             <Alert type="success" showIcon title="Hồ sơ của bạn đã sẵn sàng — không có việc gì cần làm thêm." />
@@ -150,16 +149,17 @@ export function HomePage() {
                   </Col>
                 </Row>
                 <Card size="small">
-                  <Flex justify="space-between" align="center" gap={12} wrap>
-                    <Space>
-                      <ExperimentOutlined style={{ fontSize: 22, color: colors.primary }} />
-                      <div>
-                        <b>Xem thử điều gì sẽ xảy ra</b>
-                        <div className="muted" style={{ fontSize: 13 }}>Không ai bị thông báo — chỉ là một bản xem trước dành cho bạn.</div>
-                      </div>
-                    </Space>
-                    <Link to="/dry-run"><Button>Xem thử</Button></Link>
-                  </Flex>
+                  <SplitRow align="center" gap={12}
+                    left={
+                      <Space>
+                        <ExperimentOutlined style={{ fontSize: 22, color: colors.primary }} />
+                        <div>
+                          <b>Xem thử điều gì sẽ xảy ra</b>
+                          <div className="muted" style={{ fontSize: 13 }}>Không ai bị thông báo — chỉ là một bản xem trước dành cho bạn.</div>
+                        </div>
+                      </Space>
+                    }
+                    right={<Link to="/dry-run"><Button>Xem thử</Button></Link>} />
                 </Card>
               </Space>
             </div>

@@ -48,7 +48,7 @@ public class DeathNoteIdentitySeedContributor : IDataSeedContributor, ITransient
             DeathNotePermissions.Releases.Approve, DeathNotePermissions.AuditLog);
         await SeedRoleAsync(DeathNoteConsts.Roles.Compliance,
             DeathNotePermissions.Dashboard, DeathNotePermissions.Releases.Default, DeathNotePermissions.Releases.Evidence,
-            DeathNotePermissions.AuditLog, DeathNotePermissions.Policy.Default);
+            DeathNotePermissions.AuditLog, DeathNotePermissions.Policy.Default, DeathNotePermissions.EmailTemplates.Default);
 
 
         if (!_configuration.GetValue<bool>("DeathNote:SeedDemoUsers")) return;

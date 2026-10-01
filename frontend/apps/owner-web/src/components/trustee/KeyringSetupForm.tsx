@@ -9,8 +9,8 @@ import { useState } from 'react';
 import { App, Alert, Button, Checkbox, Form, Input, Typography } from 'antd';
 import { createKeyring, wipe } from '@deathnote/crypto';
 import { ErrorAlert } from '@deathnote/ui';
-import { MIN_PASSPHRASE_LENGTH } from '../config';
-import { useCreateKeyring } from '../lib/api-hooks';
+import { MIN_PASSPHRASE_LENGTH } from '../../config';
+import { useCreateKeyring } from '../../lib/trusteePortalHooks';
 
 type Values = { passphrase: string; confirm: string; wroteDown: boolean };
 

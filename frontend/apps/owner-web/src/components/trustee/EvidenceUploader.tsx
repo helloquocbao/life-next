@@ -7,8 +7,8 @@ import { App, Button, Flex, Select, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { EvidenceKind } from '@deathnote/api';
 import { ErrorAlert, evidenceKindLabel, formatBytes } from '@deathnote/ui';
-import { MAX_EVIDENCE_BYTES } from '../config';
-import { useUploadEvidence } from '../lib/api-hooks';
+import { MAX_EVIDENCE_BYTES } from '../../config';
+import { useUploadEvidence } from '../../lib/trusteePortalHooks';
 
 const kindOptions = (Object.values(EvidenceKind) as EvidenceKind[]).map((k) => ({ value: k, label: evidenceKindLabel[k] }));
 

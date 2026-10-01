@@ -5,7 +5,7 @@
 import { Steps } from 'antd';
 import { ReleaseStatus, type AssignmentDto, type ReleaseProgressDto } from '@deathnote/api';
 import { formatDateTime } from '@deathnote/ui';
-import { useCountdown } from '../../lib/time';
+import { useCountdown } from '../../../lib/useServerClock';
 
 type StepStatus = 'wait' | 'process' | 'finish' | 'error';
 

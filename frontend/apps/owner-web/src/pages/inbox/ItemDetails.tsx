@@ -10,7 +10,7 @@ import { DownloadOutlined, EyeInvisibleOutlined, EyeOutlined, PaperClipOutlined 
 import { fromBase64, type ItemAttachment, type ItemField, type VaultItemData } from '@deathnote/crypto';
 import { formatBytes } from '@deathnote/ui';
 import type { OpenedItem } from '../../session/inboxSession';
-import { itemKindLabel, kindDisplayOrder } from '../../lib/itemKinds';
+import { itemKindLabel, kindDisplayOrder } from '../../lib/checklist';
 
 export function ItemDetails({ items }: { items: OpenedItem[] }) {
   // Sắp theo nhóm loại giống Bản đồ tài sản; mục lỗi xuống cuối.

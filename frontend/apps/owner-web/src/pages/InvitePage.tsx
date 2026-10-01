@@ -1,45 +1,45 @@
 /**
  * Màn hình lời mời (công khai — xem được khi chưa đăng nhập).
  *
- * Luồng: xem lời mời → "Chấp nhận vai trò" → (chưa đăng nhập ⇒ đăng nhập/đăng ký rồi quay lại đúng trang)
- *        → (chưa có khoá cá nhân ⇒ tạo khoá) → gọi accept-invitation → về Home.
+ * Luồng: xem lời mời → "Chấp nhận vai trò" → (chưa đăng nhập ⇒ form đăng nhập/đăng ký nhúng ngay trong
+ *        trang, gọi REST API, không rời trang) → (chưa có khoá cá nhân ⇒ tạo khoá) → accept-invitation.
  *
  * Thứ tự "tạo khoá TRƯỚC khi chấp nhận" giúp backend gắn luôn khoá công khai vào hồ sơ khi accept,
  * để owner có thể phân mảnh khoá ngay.
  */
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { App, Button, Card, Result, Typography } from 'antd';
-import { ErrorAlert, FullPageSpin, LegalNotice } from '@deathnote/ui';
+import { Alert, App, Button, Card, Result, Typography } from 'antd';
+import { ErrorAlert, FullPageSpin, LegalNotice, LoginForm } from '@deathnote/ui';
 import { auth } from '../config';
 import { useCurrentUser } from '../auth/useCurrentUser';
-import { KeyringSetupForm } from '../components/KeyringSetupForm';
-import { useAcceptInvitation, useInvitation, useKeyring } from '../lib/api-hooks';
-import { roleExplainer, roleLabel } from '../lib/labels';
+import { KeyringSetupForm } from '../components/trustee/KeyringSetupForm';
+import { useAcceptInvitation, useInvitation, useKeyring } from '../lib/trusteePortalHooks';
+import { roleExplainer, roleLabel } from '../lib/trusteeLabels';
 
 export function InvitePage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
-  const returnTo = `/invite?token=${encodeURIComponent(token)}`;
 
   const user = useCurrentUser();
   const invitation = useInvitation(token);
   const keyring = useKeyring(!!user);
   const accept = useAcceptInvitation();
-  const [step, setStep] = useState<'view' | 'keyring'>('view');
+  const [step, setStep] = useState<'view' | 'auth' | 'keyring'>('view');
+  const [justSignedIn, setJustSignedIn] = useState(false);
 
   const doAccept = () =>
     accept.mutate(token, {
       onSuccess: () => {
         message.success('Bạn đã nhận vai trò. Cảm ơn bạn.');
-        navigate('/', { replace: true });
+        navigate('/assignments', { replace: true });
       },
     });
 
   const onAcceptClick = () => {
-    if (!user) return void auth.login(returnTo); // đăng nhập xong quay lại đúng trang này
+    if (!user) return setStep('auth');
     if (!keyring.data?.exists) return setStep('keyring');
     doAccept();
   };
@@ -58,6 +58,17 @@ export function InvitePage() {
 
   const inv = invitation.data!;
 
+  if (step === 'auth')
+    return (
+      <>
+        <Typography.Paragraph type="secondary">
+          Đăng nhập hoặc tạo tài khoản để nhận vai trò {inv.ownerName} giao cho bạn.
+        </Typography.Paragraph>
+        <LoginForm auth={auth} embedded onSuccess={() => { setJustSignedIn(true); setStep('view'); }} />
+        <Button type="link" style={{ paddingLeft: 0, marginTop: 8 }} onClick={() => setStep('view')}>← Quay lại lời mời</Button>
+      </>
+    );
+
   if (step === 'keyring')
     return (
       <Card>
@@ -70,6 +81,9 @@ export function InvitePage() {
 
   return (
     <Card>
+      {justSignedIn && user && (
+        <Alert type="success" showIcon style={{ marginBottom: 16 }} title="Đã đăng nhập. Bấm “Chấp nhận vai trò” để tiếp tục." />
+      )}
       <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>Xin chào {inv.trusteeName},</Typography.Paragraph>
       <Typography.Title level={2} style={{ marginTop: 0 }}>
         Anh/Chị {inv.ownerName} đã chọn bạn làm {roleLabel(inv.role).toLowerCase()}
@@ -87,13 +101,6 @@ export function InvitePage() {
         Chấp nhận vai trò
       </Button>
       <ErrorAlert error={accept.error ?? keyring.error} style={{ marginTop: 12 }} />
-
-      {!user && (
-        <Typography.Paragraph style={{ textAlign: 'center', marginTop: 16 }}>
-          Chưa có tài khoản?{' '}
-          <Button type="link" style={{ padding: 0 }} onClick={() => void auth.register(returnTo)}>Đăng ký</Button>
-        </Typography.Paragraph>
-      )}
 
       <LegalNotice style={{ marginTop: 24 }} />
     </Card>

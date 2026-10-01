@@ -5,7 +5,7 @@
  * Không có hook nào đọc nội dung két: backend không cung cấp API đó cho admin (zero-knowledge).
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { unwrap, type AdminProfileDto, type ReleaseCaseDto } from '@deathnote/api';
+import { unwrap, type AdminProfileDto, type EmailTemplateDto, type ReleaseCaseDto, type UpdateEmailTemplateInput } from '@deathnote/api';
 import { parseUtc } from '@deathnote/ui';
 import { api } from '../config';
 import type { CastVoteInput, QueueTab } from './types';
@@ -17,6 +17,9 @@ export const qk = {
   queue: (tab: QueueTab, skip: number, take: number) => ['admin', 'queue', tab, skip, take] as const,
   queueAll: ['admin', 'queue'] as const,
   case: (id: string) => ['admin', 'case', id] as const,
+  emailTemplates: ['admin', 'email-templates'] as const,
+  emailDelivery: ['admin', 'email-delivery'] as const,
+  emailPreview: (key: string, subject: string, bodyHtml: string) => ['admin', 'email-preview', key, subject, bodyHtml] as const,
   audit: (skip: number, take: number, action?: string, ownerId?: string) => ['admin', 'audit', skip, take, action, ownerId] as const,
 };
 
@@ -111,3 +114,56 @@ export const useAuditLog = (skip: number, take: number, action?: string, ownerId
 /** Kiểm tra toàn vẹn chuỗi băm audit log (POST — backend tính lại toàn bộ chuỗi SHA-256). */
 export const useVerifyChain = () =>
   useMutation({ mutationFn: () => unwrap(api.POST('/api/app/admin-audit/verify-chain')) });
+
+/** Danh sách mẫu email (nội dung đang áp dụng + mặc định). */
+export const useEmailTemplates = () =>
+  useQuery({
+    queryKey: qk.emailTemplates,
+    queryFn: async () => (await unwrap(api.GET('/api/app/email-template'))).items ?? [],
+  });
+
+/** Kênh gửi email đang dùng (Resend / SMTP) và địa chỉ người gửi. */
+export const useEmailDeliveryInfo = () =>
+  useQuery({ queryKey: qk.emailDelivery, queryFn: () => unwrap(api.GET('/api/app/email-template/delivery-info')), staleTime: 10 * 60_000 });
+
+/**
+ * Xem trước bản nháp (chưa lưu) — backend thay biến bằng giá trị mẫu và bọc khung chung.
+ * Gọi lại khi bản nháp đổi (component tự debounce trước khi truyền vào).
+ */
+export const useEmailPreview = (key: string | undefined, draft: UpdateEmailTemplateInput) =>
+  useQuery({
+    queryKey: qk.emailPreview(key ?? '', draft.subject, draft.bodyHtml),
+    queryFn: () => unwrap(api.POST('/api/app/email-template/{id}/preview', { params: { path: { id: key! } }, body: draft })),
+    enabled: !!key && !!draft.subject.trim() && !!draft.bodyHtml.trim(),
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+
+function useUpdateTemplateCache() {
+  const qc = useQueryClient();
+  return (updated: EmailTemplateDto) =>
+    qc.setQueryData<EmailTemplateDto[]>(qk.emailTemplates, (list) => list?.map((t) => (t.key === updated.key ? updated : t)));
+}
+
+export function useSaveEmailTemplate(key: string) {
+  const update = useUpdateTemplateCache();
+  return useMutation({
+    mutationFn: (body: UpdateEmailTemplateInput) =>
+      unwrap(api.PUT('/api/app/email-template/{id}', { params: { path: { id: key } }, body })),
+    onSuccess: update,
+  });
+}
+
+export function useResetEmailTemplate(key: string) {
+  const update = useUpdateTemplateCache();
+  return useMutation({
+    mutationFn: () => unwrap(api.POST('/api/app/email-template/{id}/reset', { params: { path: { id: key } } })),
+    onSuccess: update,
+  });
+}
+
+export const useSendTestEmail = (key: string) =>
+  useMutation({
+    mutationFn: (body: UpdateEmailTemplateInput & { to: string }) =>
+      unwrap(api.POST('/api/app/email-template/{id}/send-test', { params: { path: { id: key } }, body })),
+  });

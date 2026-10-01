@@ -23,7 +23,9 @@ public class AdminDashboardAppService : DeathNoteAppService, IAdminDashboardAppS
         DeathNotePermissions.Releases.Approve,
         DeathNotePermissions.AuditLog,
         DeathNotePermissions.Policy.Default,
-        DeathNotePermissions.Policy.Manage
+        DeathNotePermissions.Policy.Manage,
+        DeathNotePermissions.EmailTemplates.Default,
+        DeathNotePermissions.EmailTemplates.Manage
     ];
 
     private readonly IRepository<OwnerProfile, Guid> _owners;

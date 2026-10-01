@@ -6,34 +6,36 @@ import { Button, Card, Empty, Typography } from 'antd';
 import { KeyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { ErrorAlert, FullPageSpin } from '@deathnote/ui';
-import { AssignmentCard } from '../components/assignment/AssignmentCard';
-import { useAssignments, useKeyring } from '../lib/api-hooks';
+import { AssignmentCard } from '../components/trustee/assignment/AssignmentCard';
+import { useAssignments, useKeyring } from '../lib/trusteePortalHooks';
 
-export function HomePage() {
+export function AssignmentsPage() {
   const navigate = useNavigate();
   const assignments = useAssignments();
   const keyring = useKeyring();
 
   if (assignments.isLoading || keyring.isLoading) return <FullPageSpin tip="Đang tải…" />;
   if (assignments.error || keyring.error)
-    return <ErrorAlert error={assignments.error ?? keyring.error} />;
+    return <div className="page-trustee"><ErrorAlert error={assignments.error ?? keyring.error} /></div>;
 
   const list = assignments.data ?? [];
   const needsKeyring = list.length > 0 && !keyring.data?.exists;
 
   if (list.length === 0)
     return (
-      <Card>
-        <Empty description={
-          <Typography.Paragraph style={{ fontSize: 16 }}>
-            Bạn chưa là người được uỷ quyền của ai. Nếu bạn nhận được email mời, hãy mở đường link trong email đó.
-          </Typography.Paragraph>
-        } />
-      </Card>
+      <div className="page-trustee">
+        <Card>
+          <Empty description={
+            <Typography.Paragraph style={{ fontSize: 16 }}>
+              Bạn chưa là người được uỷ quyền của ai. Nếu bạn nhận được email mời, hãy mở đường link trong email đó.
+            </Typography.Paragraph>
+          } />
+        </Card>
+      </div>
     );
 
   return (
-    <>
+    <div className="page-trustee">
       {needsKeyring && (
         <Card style={{ marginBottom: 24, borderColor: '#c98a16' }}>
           <p className="lead"><KeyOutlined style={{ marginRight: 10 }} />Việc cần làm: tạo khoá cá nhân</p>
@@ -44,6 +46,6 @@ export function HomePage() {
         </Card>
       )}
       {list.map((a) => <AssignmentCard key={a.trusteeId} a={a} keyring={keyring.data} />)}
-    </>
+    </div>
   );
 }

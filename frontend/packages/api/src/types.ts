@@ -50,6 +50,11 @@ export type RiskFlagDto = S['Admin.RiskFlagDto'];
 export type ReviewVoteDto = S['Admin.ReviewVoteDto'];
 export type ChainVerificationDto = S['Admin.ChainVerificationDto'];
 export type PolicyDto = S['Admin.PolicyDto'];
+export type EmailTemplateDto = S['EmailTemplates.EmailTemplateDto'];
+export type EmailTemplatePlaceholderDto = S['EmailTemplates.EmailTemplatePlaceholderDto'];
+export type UpdateEmailTemplateInput = S['EmailTemplates.UpdateEmailTemplateInput'];
+export type EmailPreviewDto = S['EmailTemplates.EmailPreviewDto'];
+export type EmailDeliveryInfoDto = S['EmailTemplates.EmailDeliveryInfoDto'];
 
 // ---------------------------------------------------------------------------
 //  Enum — backend serialize enum thành số; các hằng dưới đây đặt tên cho dễ đọc.
@@ -65,7 +70,7 @@ export type CheckInChannel = S['Lifecycle.CheckInChannel'];
 export const TrusteeRole = { KeyHolder: 0, ContentOnly: 1, Verifier: 2 } as const;
 export type TrusteeRole = S['Trustees.TrusteeRole'];
 
-export const TrusteeStatus = { Pending: 0, Confirmed: 1, Unresponsive: 2 } as const;
+export const TrusteeStatus = { Pending: 0, Confirmed: 1, Unresponsive: 2, NotInvitedYet: 3 } as const;
 export type TrusteeStatus = S['Trustees.TrusteeStatus'];
 
 export const ContactResponse = { CanReach: 0, CannotReach: 1 } as const;

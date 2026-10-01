@@ -3,7 +3,7 @@
  * `offsetMs` = giờ server − giờ máy, để đếm ngược đúng dù đồng hồ máy người dùng lệch.
  */
 import { useEffect, useState } from 'react';
-import { parseUtc } from '@deathnote/ui';
+import { businessRemaining, parseUtc } from '@deathnote/ui';
 
 export function useServerOffset(serverNow?: string | null) {
   const server = parseUtc(serverNow);
@@ -16,4 +16,11 @@ export function useTick(intervalMs = 1000) {
     const t = window.setInterval(() => set((x) => x + 1), intervalMs);
     return () => window.clearInterval(t);
   }, [intervalMs]);
+}
+
+/** Thời gian nghiệp vụ còn lại tới một mốc; tự cập nhật mỗi giây. Dùng ở các màn trustee (đếm ngược ân hạn…). */
+export function useCountdown(target: string | null | undefined, serverNow: string | undefined, timeScale: number | undefined) {
+  useTick(1000);
+  const offset = useServerOffset(serverNow);
+  return businessRemaining(target, offset, timeScale && timeScale > 0 ? timeScale : 1);
 }

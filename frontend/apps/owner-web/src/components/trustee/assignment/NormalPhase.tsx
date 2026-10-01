@@ -7,7 +7,7 @@ import { Collapse, Descriptions, Tag, Typography } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import { TrusteeRole, type AssignmentDto } from '@deathnote/api';
 import { colors } from '@deathnote/ui';
-import { roleHint, roleLabel } from '../../lib/labels';
+import { roleHint, roleLabel } from '../../../lib/trusteeLabels';
 
 export function NormalPhase({ a }: { a: AssignmentDto }) {
   const isKeyHolder = a.role === TrusteeRole.KeyHolder;

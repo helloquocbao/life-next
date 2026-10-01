@@ -84,10 +84,23 @@ export async function unlockVault(v: WrappedVault, passphrase: string): Promise<
 
 /** Khôi phục bằng 12 từ rồi đặt passphrase mới. Trả về VaultKey + payload ChangePassphraseInput. */
 export async function recoverVault(v: WrappedVault, phrase: string, newPassphrase: string, kdf: KdfParams = DEFAULT_KDF) {
-  const kek2 = await deriveKeyFromEntropy(recoveryPhraseToEntropy(phrase), v.recoverySalt!, RECOVERY_LABEL);
-  const vaultKey = await decrypt(v.recoveryWrappedKey!, kek2, Context.VaultKey);
-  wipe(kek2);
+  const vaultKey = await verifyRecoveryPhrase(v, phrase);
   return { vaultKey, changePassphrase: await rewrapWithPassphrase(vaultKey, newPassphrase, kdf) };
+}
+
+/**
+ * Chỉ XÁC MINH 12 từ khôi phục là đúng (không đổi passphrase) — dùng làm bằng chứng danh tính khi
+ * owner còn nhớ passphrase nhưng mất thiết bị xác thực 2FA (Google/Microsoft Authenticator). Ném lỗi
+ * nếu 12 từ sai; nếu KHÔNG ném lỗi tức là đã xác minh xong, phía gọi được phép coi như "đã chứng minh
+ * là chủ két" — 12 từ không bao giờ rời khỏi trình duyệt, server không tự xác minh lại được.
+ */
+export async function verifyRecoveryPhrase(v: WrappedVault, phrase: string): Promise<Uint8Array> {
+  const kek2 = await deriveKeyFromEntropy(recoveryPhraseToEntropy(phrase), v.recoverySalt!, RECOVERY_LABEL);
+  try {
+    return await decrypt(v.recoveryWrappedKey!, kek2, Context.VaultKey);
+  } finally {
+    wipe(kek2);
+  }
 }
 
 /** Bọc lại VaultKey bằng passphrase mới (đổi passphrase). */

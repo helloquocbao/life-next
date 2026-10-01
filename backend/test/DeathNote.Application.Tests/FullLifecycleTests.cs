@@ -75,6 +75,8 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
         var policy = S<LifecyclePolicy>();
 
         // ---------------- 1. Owner thiết lập ----------------
+        // Owner thêm 3 người thân nhưng KHÔNG muốn họ biết trước — hệ thống chỉ gửi lời mời thật khi
+        // owner thật sự bỏ lỡ xác nhận (Missed), xem TrusteeAppService.CreateAsync/LifecycleManager.
         var tokens = new List<string>();
         var trusteeIds = new List<Guid>();
         using (As(_ownerId, "an"))
@@ -96,14 +98,22 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             foreach (var (name, i) in new[] { "Bình", "Châu", "Dũng" }.Select((n, i) => (n, i)))
             {
                 var t = await trustees.CreateAsync(new SaveTrusteeInput { DisplayName = name, Email = $"t{i}@test.local", Role = TrusteeRole.KeyHolder });
+                t.Status.ShouldBe(TrusteeStatus.NotInvitedYet);
                 trusteeIds.Add(t.Id);
             }
         }
+        // Chưa gửi lời mời nào — chưa đến hạn.
+        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(0);
+
+        // ---------------- 2. Owner im lặng → Missed: hệ thống TỰ ĐỘNG gửi lời mời lúc này ----------------
+        FakeClock.Advance(TimeSpan.FromDays(7.1));
+        await Tick();
+        (await Owner()).State.ShouldBe(LifecycleState.Missed);
         foreach (var m in notifier.Sent.Where(m => m.Subject.Contains("người được uỷ quyền")))
             tokens.Add(Uri.UnescapeDataString(Regex.Match(m.HtmlBody, @"token=([^""&]+)").Groups[1].Value));
         tokens.Count.ShouldBe(3);
 
-        // ---------------- 2. Trustee chấp nhận + tạo khoá ----------------
+        // ---------------- 3. Trustee chấp nhận + tạo khoá ----------------
         for (var i = 0; i < 3; i++)
         {
             using (As(_trusteeUsers[i], $"trustee{i}"))
@@ -114,7 +124,7 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             }
         }
 
-        // ---------------- 3. Owner phân mảnh 2-of-3 ----------------
+        // ---------------- 4. Owner phân mảnh 2-of-3 (vẫn còn cơ hội trong lúc Missed, trước khi hết vòng nhắc) ----------------
         using (As(_ownerId, "an"))
         {
             var vault = await S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
@@ -130,10 +140,7 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             (await S<IOwnerAppService>().GetStatusAsync()).Readiness.Score.ShouldBeGreaterThan(50);
         }
 
-        // ---------------- 4. Owner im lặng → Missed → 4 vòng nhắc → Grace ----------------
-        FakeClock.Advance(TimeSpan.FromDays(7.1));
-        await Tick();
-        (await Owner()).State.ShouldBe(LifecycleState.Missed);
+        // ---------------- 5. 4 vòng nhắc còn lại → Grace ----------------
         for (var i = 0; i < policy.ReminderSteps; i++)
         {
             FakeClock.Advance(policy.ReminderInterval + TimeSpan.FromMinutes(1));
@@ -287,6 +294,58 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             var request = await S<IRepository<ReleaseRequest, Guid>>().FirstAsync(r => r.OwnerId == ownerId);
             request.Status.ShouldBe(ReleaseStatus.CancelledByOwner);
         });
+    }
+
+    /// <summary>
+    /// Owner quên cả passphrase lẫn 12 từ khôi phục — không có API "quên mật khẩu" nào cứu được
+    /// (đúng thiết kế zero-knowledge). Lối thoát duy nhất là từ bỏ két cũ: xoá sạch hạng mục, mảnh khoá,
+    /// phân bổ, rồi cho phép tạo két mới — trong khi vẫn giữ nguyên danh sách người được uỷ quyền.
+    /// </summary>
+    [Fact]
+    public async Task Owner_can_abandon_a_locked_out_vault_and_create_a_new_one()
+    {
+        var ownerId = Guid.NewGuid();
+        var trusteeId = Guid.NewGuid();
+        using (As(ownerId, "chau"))
+        {
+            await S<IOwnerAppService>().CompleteOnboardingAsync(new CompleteOnboardingInput { DisplayName = "Châu", CheckInIntervalDays = 30, GraceDays = 14 });
+            await S<IVaultAppService>().InitializeAsync(new InitializeVaultInput
+            {
+                KdfSalt = "c2FsdA==", KdfOpsLimit = 3, KdfMemLimit = 64 << 20,
+                PassphraseWrappedKey = "wrapped-old", RecoveryWrappedKey = "recovery-old", RecoverySalt = "cnNhbHQ="
+            });
+            var item = await S<IVaultAppService>().CreateItemAsync(new SaveVaultItemInput { Ciphertext = "old-secret", WrappedItemKey = "wik" });
+            var trustee = await S<ITrusteeAppService>().CreateAsync(new SaveTrusteeInput { DisplayName = "Dũng", Email = "d@test.local", Role = TrusteeRole.KeyHolder });
+            trusteeId = trustee.Id;
+
+            // Quên cả 2 chìa → từ bỏ két.
+            await S<IVaultAppService>().AbandonAsync();
+
+            // Vault cũ đã biến mất hoàn toàn — tạo lại được ngay, không còn hạng mục cũ.
+            var status = await S<IOwnerAppService>().GetStatusAsync();
+            status.VaultInitialized.ShouldBeFalse();
+            status.RecoveryKitConfirmed.ShouldBeFalse();
+
+            var newVault = await S<IVaultAppService>().InitializeAsync(new InitializeVaultInput
+            {
+                KdfSalt = "bmV3", KdfOpsLimit = 3, KdfMemLimit = 64 << 20,
+                PassphraseWrappedKey = "wrapped-new", RecoveryWrappedKey = "recovery-new", RecoverySalt = "bmV3c2FsdA=="
+            });
+            newVault.PassphraseWrappedKey.ShouldBe("wrapped-new");
+            (await S<IVaultAppService>().GetItemsAsync()).ShouldBeEmpty(); // hạng mục cũ không còn
+
+            // Người được uỷ quyền vẫn còn nguyên — owner không cần mời lại.
+            (await S<ITrusteeAppService>().GetListAsync()).ShouldContain(t => t.Id == trusteeId);
+
+            _ = item;
+        }
+
+        // Không thể từ bỏ hai lần liên tiếp nếu chưa có két nào để bỏ.
+        using (As(Guid.NewGuid(), "chua-co-ket"))
+        {
+            var ex = await Should.ThrowAsync<BusinessException>(() => S<IVaultAppService>().AbandonAsync());
+            ex.Code.ShouldBe(DeathNoteErrorCodes.VaultNotInitialized);
+        }
     }
 
     /// <summary>Trustee đồng thuận từ một "thiết bị" (IP) và chuyển mảnh khoá cho 2 người còn lại.</summary>

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Uow;
 
 namespace DeathNote.Vaults;
 
@@ -132,6 +133,42 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
             ActorUserId: UserId, ActorName: CurrentUserDisplayName,
             Detail: $"Ngưỡng {input.Threshold}/{keyHolderIds.Count}, {input.Grants.Count} người nhận, phiên bản khoá {vault.KeyVersion}"));
         return vault.ToDto();
+    }
+
+    /// <summary>
+    /// Từ bỏ két hiện tại: xoá vĩnh viễn mọi hạng mục, mảnh khoá đã phát và phân bổ. Sau lệnh này,
+    /// <see cref="InitializeAsync"/> lại nhận được vì server không còn két nào cho owner này.
+    /// Không đụng tới danh sách người được uỷ quyền — họ vẫn được owner tin tưởng, chỉ là owner cần
+    /// phân mảnh khoá lại từ đầu sau khi có két mới.
+    /// </summary>
+    public async Task AbandonAsync()
+    {
+        var vault = await GetVaultAsync();
+        // Không cho từ bỏ két khi đang có yêu cầu mở dở dang — tránh xoá dữ liệu ngay khi người thân
+        // đang thực sự cần (dù trường hợp này hiếm vì owner mất mật khẩu không cản trở check-in).
+        if (await _releases.AnyAsync(r => r.OwnerId == UserId && r.Status != ReleaseStatus.Released
+                                          && r.Status != ReleaseStatus.Rejected && r.Status != ReleaseStatus.CancelledByOwner))
+            throw new BusinessException(DeathNoteErrorCodes.ReleaseAlreadyOpen);
+
+        // QUAN TRỌNG: Vault và VaultItem kế thừa FullAuditedAggregateRoot ⇒ có ISoftDelete. DeleteAsync
+        // thường sẽ chỉ đánh dấu IsDeleted=true (giữ nguyên hàng trong bảng để phục vụ audit thông thường),
+        // KHÔNG xoá vật lý. Với Vault, Id = OwnerId cố định — nếu chỉ soft-delete, hàng cũ vẫn chiếm khoá
+        // chính, khiến InitializeAsync tạo két mới ngay sau đó bị đụng khoá chính (đã xác nhận bằng test +
+        // kiểm tra trực tiếp CSDL). Ở đây owner đã CHỦ ĐỘNG xin xoá vĩnh viễn, nên phải HardDeleteAsync
+        // (xoá vật lý thật sự) cho hai loại này. KeyShare/Grant không kế thừa ISoftDelete nên DeleteAsync
+        // thường đã là xoá vật lý.
+        await _items.HardDeleteAsync(i => i.OwnerId == UserId);
+        await _keyShares.DeleteAsync(k => k.OwnerId == UserId);
+        await _grants.DeleteAsync(g => g.OwnerId == UserId);
+        await _vaults.HardDeleteAsync(vault, autoSave: true);
+
+        var owner = await _owners.GetAsync(UserId);
+        owner.ResetForNewVault();
+        await _owners.UpdateAsync(owner);
+
+        await Audit.RecordAsync(new AuditEntry(AuditActions.VaultAbandoned, UserId, ActorType: AuditActorType.Owner,
+            ActorUserId: UserId, ActorName: CurrentUserDisplayName,
+            Detail: "Owner từ bỏ két cũ (quên mật khẩu chính lẫn 12 từ khôi phục) — toàn bộ hạng mục, mảnh khoá và phân bổ cũ đã bị xoá vĩnh viễn."));
     }
 
     private async Task EnsureOwnerAsync()

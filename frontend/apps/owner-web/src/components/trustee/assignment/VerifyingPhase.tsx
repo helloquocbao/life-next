@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Alert, Button, Divider, Typography } from 'antd';
 import { ReleaseStatus, type AssignmentDto, type KeyringDto } from '@deathnote/api';
 import { releaseReasonLabel } from '@deathnote/ui';
-import { useCountdown } from '../../lib/time';
+import { useCountdown } from '../../../lib/useServerClock';
 import { ConsentModal } from './ConsentModal';
 import { ConsentProgress } from './ConsentProgress';
 import { EvidenceSection } from './EvidenceSection';

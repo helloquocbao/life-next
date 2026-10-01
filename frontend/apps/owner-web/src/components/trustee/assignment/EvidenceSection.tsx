@@ -6,7 +6,7 @@ import { App, Alert, Button, List, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { ReleaseStatus, TrusteeRole, type ReleaseProgressDto, type TrusteeRole as Role } from '@deathnote/api';
 import { ErrorAlert, evidenceKindLabel, formatBytes, formatDateTime } from '@deathnote/ui';
-import { useResubmit } from '../../lib/api-hooks';
+import { useResubmit } from '../../../lib/trusteePortalHooks';
 import { EvidenceUploader } from '../EvidenceUploader';
 
 const UPLOADABLE: (ReleaseStatus | undefined)[] = [

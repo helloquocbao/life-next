@@ -15,8 +15,8 @@ import { useState } from 'react';
 import { unwrap, type KeyringDto } from '@deathnote/api';
 import { prepareConsentDeliveries, wipe } from '@deathnote/crypto';
 import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../../config';
-import { unlockWithPassphrase } from '../../lib/keyring';
+import { api } from '../../../config';
+import { unlockWithPassphrase } from '../../../lib/keyring';
 import { PassphraseForm } from '../PassphraseForm';
 
 export function ConsentModal({ requestId, ownerName, keyring, open, onClose }: {

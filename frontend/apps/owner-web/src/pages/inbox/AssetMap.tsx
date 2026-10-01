@@ -1,7 +1,7 @@
 /** Bản đồ tài sản: nhóm hạng mục theo loại → số lượng. Cái nhìn tổng quan trước khi đi vào chi tiết. */
 import { Card, Col, Row, Statistic } from 'antd';
 import type { VaultItemData, VaultItemKind } from '@deathnote/crypto';
-import { itemKindLabel, kindDisplayOrder } from '../../lib/itemKinds';
+import { itemKindLabel, kindDisplayOrder } from '../../lib/checklist';
 
 export function AssetMap({ items }: { items: { id: string; data: VaultItemData }[] }) {
   const counts = new Map<VaultItemKind, number>();

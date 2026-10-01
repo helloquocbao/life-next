@@ -7,6 +7,6 @@ namespace DeathNote;
 [Dependency(ReplaceServices = true)]
 public class DeathNoteBrandingProvider : DefaultBrandingProvider
 {
-    public override string AppName => "LifeNext";
+    public override string AppName => "Death Note";
     public override string LogoUrl => "/images/logo.svg";
 }

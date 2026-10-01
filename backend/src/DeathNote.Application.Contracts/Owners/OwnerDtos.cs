@@ -48,7 +48,9 @@ public class OwnerStatusDto
     public bool KeysOutdated { get; set; }
     public DateTime? LastVaultUpdateAt { get; set; }
     public bool RecoveryKitConfirmed { get; set; }
-    public bool CheckInTwoFactorEnabled { get; set; }
+    public bool VaultUnlockTwoFactorEnabled { get; set; }
+    /// <summary>Tuỳ chọn trả phí định kỳ: nhân viên PICO chủ động liên hệ khi owner đến hạn (Missed).</summary>
+    public bool StaffContactOnMissed { get; set; }
 
     /// <summary>Giờ server — client dùng để tính đếm ngược chính xác dù đồng hồ máy lệch.</summary>
     public DateTime ServerNow { get; set; }
@@ -92,10 +94,9 @@ public class CompleteOnboardingInput
     public int GraceDays { get; set; } = 14;
 }
 
+/// <summary>Không cần trường nào — check-in là một chạm, không yêu cầu 2FA (2FA chỉ áp dụng lúc mở két).</summary>
 public class CheckInInput
 {
-    /// <summary>Mã TOTP 6 số — bắt buộc khi owner đã bật 2FA cho check-in.</summary>
-    [StringLength(8)] public string? TwoFactorCode { get; set; }
 }
 
 public class CheckInResultDto
@@ -172,6 +173,11 @@ public class TwoFactorSetupDto
 public class EnableTwoFactorInput
 {
     [Required, StringLength(8)] public string Code { get; set; } = default!;
+}
+
+public class SetStaffContactOnMissedInput
+{
+    public bool Enabled { get; set; }
 }
 
 public class GetActivityInput

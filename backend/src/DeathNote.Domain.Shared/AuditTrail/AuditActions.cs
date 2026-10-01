@@ -13,13 +13,17 @@ public static class AuditActions
     public const string Resumed = "owner.resumed";
     public const string OwnerVeto = "owner.veto";
     public const string TwoFactorEnabled = "owner.2fa_enabled";
+    public const string TwoFactorDisabledViaRecovery = "owner.2fa_disabled_via_recovery";
+    public const string StaffContactPreferenceChanged = "owner.staff_contact_preference_changed";
 
     public const string VaultInitialized = "vault.initialized";
     public const string VaultItemCreated = "vault.item_created";
     public const string VaultItemUpdated = "vault.item_updated";
     public const string VaultItemDeleted = "vault.item_deleted";
     public const string KeysDistributed = "vault.keys_distributed";
+    public const string VaultAbandoned = "vault.abandoned";
 
+    public const string TrusteeAdded = "trustee.added";
     public const string TrusteeInvited = "trustee.invited";
     public const string TrusteeUpdated = "trustee.updated";
     public const string TrusteeRemoved = "trustee.removed";
@@ -41,4 +45,7 @@ public static class AuditActions
     public const string ReleaseRejected = "release.rejected";
     public const string ReleaseCancelled = "release.cancelled";
     public const string ReleasedDataAccessed = "release.data_accessed";
+
+    public const string EmailTemplateUpdated = "admin.email_template_updated";
+    public const string EmailTemplateReset = "admin.email_template_reset";
 }

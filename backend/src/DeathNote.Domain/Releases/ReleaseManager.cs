@@ -29,6 +29,7 @@ public class ReleaseManager : DomainService
     private readonly LifecyclePolicy _policy;
     private readonly AuditTrailManager _audit;
     private readonly INotificationSender _notifier;
+    private readonly NotificationTemplates _templates;
     private readonly CheckInLinkService _links;
     private readonly IRequestContext _request;
     private readonly DeathNoteAppUrlOptions _urls;
@@ -45,7 +46,8 @@ public class ReleaseManager : DomainService
         INotificationSender notifier,
         CheckInLinkService links,
         IRequestContext request,
-        IOptions<DeathNoteAppUrlOptions> urls)
+        IOptions<DeathNoteAppUrlOptions> urls,
+        NotificationTemplates templates)
     {
         _releases = releases;
         _owners = owners;
@@ -56,6 +58,7 @@ public class ReleaseManager : DomainService
         _policy = policy;
         _audit = audit;
         _notifier = notifier;
+        _templates = templates;
         _links = links;
         _request = request;
         _urls = urls.Value;
@@ -91,13 +94,13 @@ public class ReleaseManager : DomainService
 
         // Owner: cảnh báo qua MỌI kênh — nếu còn ổn, 1 chạm là huỷ.
         var link = CheckInLink(owner);
-        var (s1, b1) = NotificationTemplates.OwnerReleaseInitiated(owner.DisplayName, link);
+        var (s1, b1) = await _templates.OwnerReleaseInitiatedAsync(owner.DisplayName, link);
         await _notifier.SendAsync(new NotificationMessage(owner.DisplayName, owner.Email, owner.PhoneNumber, s1, b1, NotificationChannels.All));
 
         // Các trustee khác: mời xác nhận.
         foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Id != initiator.Id && t.Status == TrusteeStatus.Confirmed))
         {
-            var (s2, b2) = NotificationTemplates.TrusteeRequestOpened(t.DisplayName, owner.DisplayName, _urls.TrusteeUrl);
+            var (s2, b2) = await _templates.TrusteeRequestOpenedAsync(t.DisplayName, owner.DisplayName, _urls.AppUrl);
             await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, s2, b2,
                 NotificationChannels.Email | NotificationChannels.Sms));
         }
@@ -157,7 +160,7 @@ public class ReleaseManager : DomainService
                 owner.EnterFinalWait(now);
                 await _audit.RecordAsync(new AuditEntry(AuditActions.ReleaseFinalWaitStarted, owner.Id,
                     TargetType: nameof(ReleaseRequest), TargetId: request.Id.ToString(), Detail: $"Chờ tới {request.FinalWaitUntil:O}"));
-                var (s, b) = NotificationTemplates.OwnerFinalWarning(owner.DisplayName, request.FinalWaitUntil!.Value, CheckInLink(owner));
+                var (s, b) = await _templates.OwnerFinalWarningAsync(owner.DisplayName, request.FinalWaitUntil!.Value, CheckInLink(owner));
                 await _notifier.SendAsync(new NotificationMessage(owner.DisplayName, owner.Email, owner.PhoneNumber, s, b, NotificationChannels.All));
                 break;
 
@@ -167,7 +170,7 @@ public class ReleaseManager : DomainService
                     TargetType: nameof(ReleaseRequest), TargetId: request.Id.ToString(), Detail: request.CloseNote));
                 foreach (var t in trustees)
                 {
-                    var (s2, b2) = NotificationTemplates.TrusteeRejected(t.DisplayName, owner.DisplayName, request.CloseNote, _urls.TrusteeUrl);
+                    var (s2, b2) = await _templates.TrusteeRejectedAsync(t.DisplayName, owner.DisplayName, request.CloseNote, _urls.AppUrl);
                     await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, s2, b2));
                 }
                 break;
@@ -175,7 +178,7 @@ public class ReleaseManager : DomainService
             case ReleaseStatus.NeedsMoreInfo:
                 foreach (var t in trustees.Where(t => t.Role != TrusteeRole.ContentOnly))
                 {
-                    var (s3, b3) = NotificationTemplates.TrusteeNeedsInfo(t.DisplayName, owner.DisplayName, request.InfoRequestNote, _urls.TrusteeUrl);
+                    var (s3, b3) = await _templates.TrusteeNeedsInfoAsync(t.DisplayName, owner.DisplayName, request.InfoRequestNote, _urls.AppUrl);
                     await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, s3, b3));
                 }
                 break;
@@ -198,7 +201,7 @@ public class ReleaseManager : DomainService
 
         foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.Confirmed))
         {
-            var (s, b) = NotificationTemplates.TrusteeReleased(t.DisplayName, owner.DisplayName, _urls.TrusteeUrl);
+            var (s, b) = await _templates.TrusteeReleasedAsync(t.DisplayName, owner.DisplayName, _urls.AppUrl);
             await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, s, b,
                 NotificationChannels.Email | NotificationChannels.Sms));
         }
@@ -218,5 +221,5 @@ public class ReleaseManager : DomainService
     }
 
     private string CheckInLink(OwnerProfile owner) =>
-        $"{_urls.OwnerUrl}/check-in?token={Uri.EscapeDataString(_links.CreateToken(owner))}";
+        $"{_urls.AppUrl}/check-in?token={Uri.EscapeDataString(_links.CreateToken(owner))}";
 }

@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { App, Button, Checkbox, Form, Input, Modal, Radio, Typography } from 'antd';
 import { ReleaseReason } from '@deathnote/api';
 import { ErrorAlert, LegalNotice, releaseReasonLabel } from '@deathnote/ui';
-import { useInitiateRelease } from '../../lib/api-hooks';
+import { useInitiateRelease } from '../../../lib/trusteePortalHooks';
 import { EvidenceUploader } from '../EvidenceUploader';
 
 type Values = { reason: ReleaseReason; statement: string; confirm: boolean };

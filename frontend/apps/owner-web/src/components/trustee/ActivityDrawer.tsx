@@ -4,7 +4,7 @@
  */
 import { Drawer, Empty, Timeline, Typography } from 'antd';
 import { ErrorAlert, FullPageSpin, auditActionLabel, formatDateTime } from '@deathnote/ui';
-import { useActivity } from '../lib/api-hooks';
+import { useActivity } from '../../lib/trusteePortalHooks';
 
 export function ActivityDrawer({ trusteeId, open, onClose }: { trusteeId: string; open: boolean; onClose: () => void }) {
   const q = useActivity(trusteeId, open);

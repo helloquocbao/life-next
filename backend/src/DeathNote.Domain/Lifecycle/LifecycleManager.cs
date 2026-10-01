@@ -25,9 +25,11 @@ public class LifecycleManager : DomainService
     private readonly LifecyclePolicy _policy;
     private readonly AuditTrailManager _audit;
     private readonly INotificationSender _notifier;
+    private readonly NotificationTemplates _templates;
     private readonly CheckInLinkService _links;
     private readonly IRequestContext _request;
     private readonly DeathNoteAppUrlOptions _urls;
+    private readonly TrusteeInvitationSender _invitationSender;
 
     public LifecycleManager(
         IRepository<OwnerProfile, Guid> owners,
@@ -39,7 +41,9 @@ public class LifecycleManager : DomainService
         INotificationSender notifier,
         CheckInLinkService links,
         IRequestContext request,
-        IOptions<DeathNoteAppUrlOptions> urls)
+        IOptions<DeathNoteAppUrlOptions> urls,
+        TrusteeInvitationSender invitationSender,
+        NotificationTemplates templates)
     {
         _owners = owners;
         _heartbeats = heartbeats;
@@ -48,9 +52,11 @@ public class LifecycleManager : DomainService
         _policy = policy;
         _audit = audit;
         _notifier = notifier;
+        _templates = templates;
         _links = links;
         _request = request;
         _urls = urls.Value;
+        _invitationSender = invitationSender;
     }
 
     // =====================================================================
@@ -101,7 +107,7 @@ public class LifecycleManager : DomainService
         {
             foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.Confirmed))
             {
-                var (subject, body) = NotificationTemplates.TrusteeCancelled(t.DisplayName, owner.DisplayName);
+                var (subject, body) = await _templates.TrusteeCancelledAsync(t.DisplayName, owner.DisplayName);
                 await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
                     NotificationChannels.Email | NotificationChannels.Push));
             }
@@ -128,6 +134,9 @@ public class LifecycleManager : DomainService
         {
             owner.MarkMissed(now);
             await RecordStateChangeAsync(owner, LifecycleState.Active);
+            // Owner không muốn người thân biết trước — chỉ đến đây, lúc thật sự bỏ lỡ xác nhận, hệ thống
+            // mới tự động gửi lời mời cho những người owner đã thêm nhưng chưa từng tiết lộ (NotInvitedYet).
+            await InviteNotYetInvitedTrusteesAsync(owner, now);
         }
 
         // Missed: leo thang từng vòng nhắc
@@ -151,8 +160,8 @@ public class LifecycleManager : DomainService
     {
         owner.RegisterReminderSent(now);
         var channelName = _policy.Options.ReminderChannels.ElementAtOrDefault(step) ?? "email";
-        var link = $"{_urls.OwnerUrl}/check-in?token={Uri.EscapeDataString(_links.CreateToken(owner))}";
-        var (subject, body) = NotificationTemplates.CheckInReminder(owner.DisplayName, step, _policy.ReminderSteps, link);
+        var link = $"{_urls.AppUrl}/check-in?token={Uri.EscapeDataString(_links.CreateToken(owner))}";
+        var (subject, body) = await _templates.CheckInReminderAsync(owner.DisplayName, step, _policy.ReminderSteps, link);
 
         // Mỗi vòng luôn gửi kèm email (để owner luôn có link 1 chạm), cộng thêm kênh của vòng đó.
         var channels = NotificationChannels.Email | channelName switch
@@ -167,6 +176,16 @@ public class LifecycleManager : DomainService
             Detail: $"Vòng {step + 1}/{_policy.ReminderSteps} — kênh {channelName}"));
     }
 
+    private async Task InviteNotYetInvitedTrusteesAsync(OwnerProfile owner, DateTime now)
+    {
+        foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.NotInvitedYet))
+        {
+            await _invitationSender.SendAsync(owner, t, now);
+            await _audit.RecordAsync(new AuditEntry(AuditActions.TrusteeInvited, owner.Id, t.Id,
+                Detail: $"{t.DisplayName} — {t.Role} (tự động gửi khi owner bỏ lỡ xác nhận)"));
+        }
+    }
+
     private async Task NotifyTrusteesGraceAsync(OwnerProfile owner, DateTime now)
     {
         var silentDays = owner.LastCheckInAt.HasValue
@@ -174,7 +193,7 @@ public class LifecycleManager : DomainService
             : 0;
         foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.Confirmed))
         {
-            var (subject, body) = NotificationTemplates.TrusteeGraceAlert(t.DisplayName, owner.DisplayName, silentDays, _urls.TrusteeUrl);
+            var (subject, body) = await _templates.TrusteeGraceAlertAsync(t.DisplayName, owner.DisplayName, silentDays, _urls.AppUrl);
             await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
                 NotificationChannels.Email | NotificationChannels.Sms));
         }

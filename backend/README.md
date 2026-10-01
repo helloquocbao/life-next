@@ -1,6 +1,6 @@
-# LifeNext — Backend
+# Death Note — Backend
 
-API cho sản phẩm **LifeNext**: bàn giao di sản số theo cơ chế "di sản cho người kế thừa" (legacy
+API cho sản phẩm **Death Note**: bàn giao di sản số theo cơ chế "di sản cho người kế thừa" (legacy
 for the successor), thiết kế **zero-knowledge** — server chỉ lưu trữ dữ liệu đã mã hoá, không bao
 giờ có khả năng đọc nội dung két của người dùng.
 
@@ -10,12 +10,11 @@ giờ có khả năng đọc nội dung két của người dùng.
 ## 1. Kiến trúc
 
 Một **ABP Framework 10.6 (open-source, LGPL-3.0)** modular monolith, layered theo DDD, phục vụ đồng
-thời 3 ứng dụng khách hàng:
+thời 2 ứng dụng khách hàng:
 
 | Ứng dụng | Vai trò | Repo |
 |---|---|---|
-| Owner Web | Người uỷ quyền — quản lý két, mời người nhận, phân bổ | `frontend/apps/owner-web` |
-| Trustee Web | Người được uỷ quyền — đồng thuận, mở hộp nhận | `frontend/apps/trustee-web` |
+| App (Owner + Trustee) | Gộp chung 1 client (`DeathNote_App`) vì 1 tài khoản có thể vừa là owner (quản lý két, mời người nhận, phân bổ) vừa là trustee của người khác (đồng thuận, mở hộp nhận) | `frontend/apps/owner-web` |
 | Admin Console | Đội vận hành PICO — thẩm định yêu cầu mở vault | `frontend/apps/admin-console` |
 
 ```
@@ -96,7 +95,7 @@ vẫn cần khoá riêng của đủ m trustee.
 |---|---|
 | Runtime | .NET 10 |
 | Framework | ABP Framework 10.6 (open-source) |
-| Auth | OpenIddict — Authorization Code + PKCE, 3 client (Owner/Trustee/Admin) + Swagger |
+| Auth | OpenIddict — Authorization Code + PKCE, 2 client (App gộp Owner+Trustee / Admin) + Swagger |
 | Database | PostgreSQL 17 + EF Core 10 (Npgsql) |
 | Background job | ABP Background Worker (`LifecycleWorker`) — không dùng Hangfire ở MVP |
 | Lưu file | ABP BlobStoring, filesystem cục bộ (`App_Data/blobs`) — production nên chuyển sang S3/MinIO |
@@ -156,6 +155,19 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --urls http://localhost:5080
 | `support` | Admin — hỗ trợ (không xem bằng chứng) |
 | `compliance` | Admin — tuân thủ |
 | `admin` / `1q2w3E*` | Super admin (theo thiết kế, **không** có quyền duyệt mở vault) |
+
+### Đăng nhập SSO bằng Google (chỉ owner)
+
+Luồng REST, không redirect: owner-web lấy ID token qua Google Identity Services → `POST /connect/token`
+với `grant_type=google&id_token=…` (`Authentication/GoogleTokenExtensionGrant.cs`). Backend kiểm chữ ký +
+audience với Google, rồi dùng tài khoản đã liên kết `sub` → hoặc liên kết vào tài khoản cùng email → hoặc tạo
+tài khoản mới (username = email). Grant chỉ cấp cho client `DeathNote_App`; tài khoản nội bộ (có role) bị từ chối.
+
+1. Google Cloud Console → *APIs & Services → Credentials → OAuth client ID* (loại **Web application**),
+   *Authorized JavaScript origins*: `http://localhost:5173` (+ domain production). Không cần redirect URI.
+2. Backend: `Authentication:Google:ClientId` (user-secrets hoặc biến môi trường `Authentication__Google__ClientId`).
+3. Frontend: `VITE_GOOGLE_CLIENT_ID` trong `frontend/apps/owner-web/.env` (cùng giá trị).
+4. Chạy lại seed (dev: tự chạy khi khởi động) để client `DeathNote_App` có quyền `gt:google`.
 
 ### Chạy test
 ```bash

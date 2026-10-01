@@ -1,0 +1,56 @@
+# =============================================================================
+# Mẫu cấu hình reverse proxy cho PRODUCTION — 2 domain (Owner+Trustee gộp 1 app, Admin tách riêng):
+#
+#   https://app.lifenext.app    → App (frontend/apps/owner-web, gồm cả owner lẫn trustee)
+#   https://admin.lifenext.app  → Admin Console (frontend/apps/admin-console)
+#   https://api.lifenext.app    → Backend API (proxy tới DeathNote.HttpApi.Host)
+#
+# Build bình thường (không cần BASE_PATH — mỗi app phục vụ ở gốc domain riêng của nó):
+#   cd frontend/apps/owner-web     && pnpm build
+#   cd frontend/apps/admin-console && pnpm build
+#
+# Cập nhật cấu hình backend (appsettings.Production.json hoặc biến môi trường
+# App__Clients__* / OpenIddict__Applications__*__RootUrl) để redirect_uri OIDC khớp domain thật:
+#   App:Clients:AppUrl                              = https://app.lifenext.app
+#   App:Clients:AdminUrl                            = https://admin.lifenext.app
+#   OpenIddict:Applications:DeathNote_App:RootUrl    = https://app.lifenext.app
+#   OpenIddict:Applications:DeathNote_Admin:RootUrl  = https://admin.lifenext.app
+#   App:CorsOrigins / App:RedirectAllowedUrls        = https://app.lifenext.app,https://admin.lifenext.app
+#
+# Đây chỉ là VÍ DỤ để tham khảo khi dựng hạ tầng thật — chưa dùng cho dev cục bộ.
+# =============================================================================
+
+server {
+    listen 443 ssl http2;
+    server_name app.lifenext.app;
+    # ssl_certificate     /etc/letsencrypt/live/app.lifenext.app/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/app.lifenext.app/privkey.pem;
+
+    root /var/www/lifenext/app;
+    try_files $uri $uri/ /index.html;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name admin.lifenext.app;
+    # ssl_certificate     /etc/letsencrypt/live/admin.lifenext.app/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/admin.lifenext.app/privkey.pem;
+
+    root /var/www/lifenext/admin-console;
+    try_files $uri $uri/ /index.html;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.lifenext.app;
+    # ssl_certificate     /etc/letsencrypt/live/api.lifenext.app/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/api.lifenext.app/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

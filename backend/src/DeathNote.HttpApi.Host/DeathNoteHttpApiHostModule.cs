@@ -1,6 +1,8 @@
+using DeathNote.Authentication;
 using DeathNote.Data;
 using DeathNote.EntityFrameworkCore;
 using DeathNote.Infrastructure;
+using DeathNote.Notifications;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http.Features;
@@ -20,7 +22,10 @@ using Volo.Abp.Data;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
+using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Volo.Abp.Emailing;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.UI.Navigation.Urls;
 
@@ -62,6 +67,10 @@ public class DeathNoteHttpApiHostModule : AbpModule
             });
         });
 
+        // SSO Google cho owner: grant tuỳ biến "google" trên /connect/token (xem GoogleTokenExtensionGrant).
+        PreConfigure<OpenIddictServerBuilder>(b =>
+            b.Configure(o => o.GrantTypes.Add(GoogleTokenExtensionGrant.ExtensionGrantName)));
+
         if (!env.IsDevelopment())
         {
             // Production: dùng chứng chỉ ký/ mã hoá token thật thay cho chứng chỉ dev tự sinh.
@@ -94,7 +103,11 @@ public class DeathNoteHttpApiHostModule : AbpModule
         // Bearer token cho API; cookie cho trang đăng nhập.
         context.Services.ForwardIdentityAuthenticationForBearer(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 
+        Configure<AbpOpenIddictExtensionGrantsOptions>(o =>
+            o.Grants.Add(GoogleTokenExtensionGrant.ExtensionGrantName, new GoogleTokenExtensionGrant()));
+
         Configure<DeathNoteAppUrlOptions>(configuration.GetSection("App:Clients"));
+        ConfigureEmail(context.Services, configuration);
 
         Configure<AppUrlOptions>(options =>
         {
@@ -135,6 +148,19 @@ public class DeathNoteHttpApiHostModule : AbpModule
         ConfigureCors(context, configuration);
     }
 
+    /// <summary>Có <c>Resend:ApiKey</c> → gửi email qua Resend HTTP API; không có → giữ SMTP mặc định của ABP (dev: Mailpit).</summary>
+    private static void ConfigureEmail(IServiceCollection services, IConfiguration configuration)
+    {
+        if (string.IsNullOrWhiteSpace(configuration["Resend:ApiKey"])) return;
+
+        services.AddHttpClient(ResendEmailSender.HttpClientName, c =>
+        {
+            c.BaseAddress = new Uri("https://api.resend.com/");
+            c.Timeout = TimeSpan.FromSeconds(20);
+        });
+        services.Replace(ServiceDescriptor.Transient<IEmailSender, ResendEmailSender>());
+    }
+
     private static void ConfigureSwagger(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddAbpSwaggerGenWithOidc(
@@ -146,7 +172,7 @@ public class DeathNoteHttpApiHostModule : AbpModule
             {
                 options.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "LifeNext API",
+                    Title = "Death Note API",
                     Version = "v1",
                     Description = "API bàn giao di sản số — zero-knowledge, m-of-n, audit bất biến."
                 });
@@ -161,7 +187,7 @@ public class DeathNoteHttpApiHostModule : AbpModule
             });
     }
 
-    /// <summary>CORS: chỉ cho phép đúng 3 ứng dụng web của sản phẩm gọi API.</summary>
+    /// <summary>CORS: chỉ cho phép đúng các ứng dụng web của sản phẩm gọi API (App gộp Owner+Trustee, Admin).</summary>
     private static void ConfigureCors(ServiceConfigurationContext context, IConfiguration configuration)
     {
         context.Services.AddCors(options =>
@@ -200,7 +226,7 @@ public class DeathNoteHttpApiHostModule : AbpModule
         app.UseSwagger();
         app.UseAbpSwaggerUI(options =>
         {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "LifeNext API");
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Death Note API");
             options.OAuthClientId("DeathNote_Swagger");
             options.OAuthUsePkce();
         });

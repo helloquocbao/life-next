@@ -3,11 +3,11 @@
  * Tìm kiếm chạy trên dữ liệu đã giải mã trong trình duyệt (server không có index nội dung).
  */
 import { useMemo, useState, type ReactNode } from 'react';
-import { App, Button, Flex, Input, Space, Typography } from 'antd';
+import { App, Button, Input, Space } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { unwrap } from '@deathnote/api';
-import { ErrorAlert, FullPageSpin } from '@deathnote/ui';
+import { ErrorAlert, FullPageSpin, PageHeader } from '@deathnote/ui';
 import { api } from '../config';
 import { qk, useTrustees } from '../lib/api-hooks';
 import { recipientsOf, useAllocation } from '../lib/useAllocation';
@@ -49,13 +49,8 @@ export function ItemsWorkspace({ section, title, subtitle, header }: {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Flex justify="space-between" align="end" gap={12} wrap>
-        <div>
-          <Typography.Title level={2} style={{ margin: 0 }}>{title}</Typography.Title>
-          <Typography.Text type="secondary">{subtitle}</Typography.Text>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setEditor({ open: true })}>Thêm</Button>
-      </Flex>
+      <PageHeader title={title} subtitle={subtitle}
+        action={<Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setEditor({ open: true })}>Thêm</Button>} />
       <ErrorAlert error={error} />
       {header?.((kind, t) => setEditor({ open: true, kind, title: t }), items)}
       <Input size="large" prefix={<SearchOutlined />} placeholder="Tìm trong dữ liệu đã giải mã…" value={search} onChange={(e) => setSearch(e.target.value)} allowClear />

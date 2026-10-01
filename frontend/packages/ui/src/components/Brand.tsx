@@ -9,7 +9,7 @@ export function Brand({ subtitle, size = 20 }: { subtitle?: string; size?: numbe
         <path d="M9 17l4 4 10-10" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <div style={{ lineHeight: 1.1 }}>
-        <div style={{ fontWeight: 700, fontSize: size, color: colors.ink }}>LifeNext</div>
+        <div style={{ fontWeight: 700, fontSize: size, color: colors.ink }}>Death Note</div>
         {subtitle && <div style={{ fontSize: 12, color: colors.muted }}>{subtitle}</div>}
       </div>
     </div>

@@ -21,6 +21,8 @@ export const Perm = {
   Approve: 'DeathNote.Releases.Approve',
   AuditLog: 'DeathNote.AuditLog',
   Policy: 'DeathNote.Policy',
+  EmailTemplates: 'DeathNote.EmailTemplates',
+  EmailTemplatesManage: 'DeathNote.EmailTemplates.Manage',
 } as const;
 
 export type PermissionName = (typeof Perm)[keyof typeof Perm];

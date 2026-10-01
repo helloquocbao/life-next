@@ -94,6 +94,61 @@ namespace DeathNote.Migrations
                     b.ToTable("DnAuditEvents", (string)null);
                 });
 
+            modelBuilder.Entity("DeathNote.Notifications.EmailTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("DnEmailTemplates", (string)null);
+                });
+
             modelBuilder.Entity("DeathNote.Owners.Heartbeat", b =>
                 {
                     b.Property<Guid>("Id")
@@ -138,9 +193,6 @@ namespace DeathNote.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
-
-                    b.Property<bool>("CheckInTwoFactorEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -229,11 +281,17 @@ namespace DeathNote.Migrations
                     b.Property<int>("RemindersSent")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("StaffContactOnMissed")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StateChangedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("VaultUnlockTwoFactorEnabled")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -541,7 +599,6 @@ namespace DeathNote.Migrations
                         .HasColumnName("ExtraProperties");
 
                     b.Property<string>("InvitationTokenHash")
-                        .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 

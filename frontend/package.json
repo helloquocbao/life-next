@@ -1,7 +1,7 @@
 {
   "name": "deathnote-frontend",
   "private": true,
-  "description": "LifeNext \u2014 3 \u1ee9ng d\u1ee5ng web (Owner, Trustee, Admin) + c\u00e1c package d\u00f9ng chung",
+  "description": "LifeNext \u2014 2 \u1ee9ng d\u1ee5ng web (App: g\u1ed9p Owner + Trustee; Admin) + c\u00e1c package d\u00f9ng chung",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",

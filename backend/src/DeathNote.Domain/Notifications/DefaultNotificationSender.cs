@@ -7,7 +7,7 @@ namespace DeathNote.Notifications;
 /// <summary>
 /// Implementation mặc định cho MVP:
 /// <list type="bullet">
-/// <item>Email: gửi thật qua SMTP (môi trường dev dùng Mailpit — xem http://localhost:8026).</item>
+/// <item>Email: gửi thật qua Resend khi cấu hình <c>Resend:ApiKey</c>, ngược lại qua SMTP (dev dùng Mailpit — xem http://localhost:8026).</item>
 /// <item>SMS / Push / Gọi tự động: ghi log có tiền tố [STUB] — Phase tiếp theo tích hợp eSMS/SpeedSMS, Web Push, tổng đài.</item>
 /// </list>
 /// Lỗi gửi thông báo KHÔNG được làm hỏng nghiệp vụ chính (vd. chuyển trạng thái), nên chỉ ghi log cảnh báo.
@@ -15,11 +15,13 @@ namespace DeathNote.Notifications;
 public class DefaultNotificationSender : INotificationSender, ITransientDependency
 {
     private readonly IEmailSender _emailSender;
+    private readonly EmailTemplateRenderer _templates;
     private readonly ILogger<DefaultNotificationSender> _logger;
 
-    public DefaultNotificationSender(IEmailSender emailSender, ILogger<DefaultNotificationSender> logger)
+    public DefaultNotificationSender(IEmailSender emailSender, EmailTemplateRenderer templates, ILogger<DefaultNotificationSender> logger)
     {
         _emailSender = emailSender;
+        _templates = templates;
         _logger = logger;
     }
 
@@ -29,7 +31,8 @@ public class DefaultNotificationSender : INotificationSender, ITransientDependen
         {
             try
             {
-                await _emailSender.SendAsync(m.Email, m.Subject, NotificationTemplates.Layout(m.Subject, m.HtmlBody), isBodyHtml: true);
+                var html = await _templates.WrapInLayoutAsync(m.Subject, m.HtmlBody);
+                await _emailSender.SendAsync(m.Email, m.Subject, html, isBodyHtml: true);
             }
             catch (Exception ex)
             {

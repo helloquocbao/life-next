@@ -12,7 +12,7 @@ export function getHomeTourSteps(): DriveStep[] {
       element: '[data-tour="status-ring"]',
       popover: {
         title: 'Chào mừng bạn 👋',
-        description: 'Đây là toàn bộ những gì bạn cần biết mỗi khi mở LifeNext: bạn đang ổn, và còn bao lâu nữa tới lần xác nhận tiếp theo.',
+        description: 'Đây là toàn bộ những gì bạn cần biết mỗi khi mở Death Note: bạn đang ổn, và còn bao lâu nữa tới lần xác nhận tiếp theo.',
       },
     },
     {

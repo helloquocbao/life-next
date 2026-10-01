@@ -124,7 +124,8 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             KeysDistributed = vault?.HasKeyDistribution ?? false,
             KeysOutdated = vault?.KeysOutdated ?? false,
             RecoveryKitConfirmed = owner.RecoveryKitConfirmed,
-            CheckInTwoFactorEnabled = owner.CheckInTwoFactorEnabled,
+            VaultUnlockTwoFactorEnabled = owner.VaultUnlockTwoFactorEnabled,
+            StaffContactOnMissed = owner.StaffContactOnMissed,
             ServerNow = Clock.Now,
             TimeScale = _policy.Options.TimeScale
         };
@@ -174,7 +175,7 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             new() { Code = "trustee", Label = "Có người được uỷ quyền đã xác nhận", Done = s.ConfirmedTrusteeCount >= 1, Weight = 15 },
             new() { Code = "two_keyholders", Label = "Có ít nhất 2 người giữ khoá", Done = readyKeyHolders >= 2, Weight = 10 },
             new() { Code = "keys", Label = "Phân mảnh khoá và phân bổ người nhận", Done = s.KeysDistributed && !s.KeysOutdated, Weight = 15 },
-            new() { Code = "two_factor", Label = "Bật xác thực hai lớp cho check-in", Done = s.CheckInTwoFactorEnabled, Weight = 5 },
+            new() { Code = "two_factor", Label = "Bật xác thực hai lớp cho mở két", Done = s.VaultUnlockTwoFactorEnabled, Weight = 5 },
         };
         return new ReadinessDto
         {
@@ -250,21 +251,25 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         await _owners.UpdateAsync(owner);
     }
 
+    /// <summary>Bật/tắt tuỳ chọn trả phí định kỳ "nhân viên PICO chủ động liên hệ khi đến hạn". MVP: chỉ lưu cờ.</summary>
+    public async Task SetStaffContactOnMissedAsync(SetStaffContactOnMissedInput input)
+    {
+        var owner = await GetOwnerAsync();
+        owner.SetStaffContactOnMissed(input.Enabled);
+        await _owners.UpdateAsync(owner);
+        await Audit.RecordAsync(new AuditEntry(AuditActions.StaffContactPreferenceChanged, owner.Id, ActorType: AuditActorType.Owner,
+            ActorUserId: owner.Id, ActorName: owner.DisplayName, Detail: input.Enabled ? "Bật nhân viên liên hệ khi đến hạn (trả phí định kỳ)" : "Tắt nhân viên liên hệ khi đến hạn"));
+    }
+
     // =====================================================================
     //  CHECK-IN
     // =====================================================================
 
     public async Task<CheckInResultDto> CheckInAsync(CheckInInput input)
     {
+        // Không yêu cầu 2FA ở đây: 2FA chỉ áp dụng ở bước mở két (xem VerifyVaultUnlockCodeAsync).
+        // Check-in cần nhanh, một chạm — kể cả qua link email/SMS không đăng nhập được.
         var owner = await GetOwnerAsync();
-        if (owner.CheckInTwoFactorEnabled)
-        {
-            if (string.IsNullOrWhiteSpace(input.TwoFactorCode)) throw new BusinessException(DeathNoteErrorCodes.TwoFactorRequired);
-            var secret = await GetTotpSecretAsync(TotpActiveKey);
-            if (secret == null || !Totp.Verify(secret, input.TwoFactorCode, DateTime.UtcNow))
-                throw new BusinessException(DeathNoteErrorCodes.InvalidTwoFactorCode);
-        }
-
         var previous = await _lifecycle.CheckInAsync(owner, CheckInChannel.Web);
         return new CheckInResultDto
         {
@@ -379,7 +384,7 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         return new TwoFactorSetupDto
         {
             SharedKey = secret,
-            AuthenticatorUri = Totp.BuildUri("LifeNext", user.Email ?? user.UserName, secret)
+            AuthenticatorUri = Totp.BuildUri("Death Note", user.Email ?? user.UserName, secret)
         };
     }
 
@@ -393,7 +398,7 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
 
         (await _userManager.SetAuthenticationTokenAsync(user, TotpProvider, TotpActiveKey, pending)).CheckErrors();
         (await _userManager.RemoveAuthenticationTokenAsync(user, TotpProvider, TotpPendingKey)).CheckErrors();
-        owner.SetCheckInTwoFactor(true);
+        owner.SetVaultUnlockTwoFactor(true);
         await _owners.UpdateAsync(owner);
         await Audit.RecordAsync(new AuditEntry(AuditActions.TwoFactorEnabled, owner.Id, ActorType: AuditActorType.Owner,
             ActorUserId: owner.Id, ActorName: owner.DisplayName));
@@ -407,8 +412,43 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             throw new BusinessException(DeathNoteErrorCodes.InvalidTwoFactorCode);
         var user = await _userManager.GetByIdAsync(UserId);
         (await _userManager.RemoveAuthenticationTokenAsync(user, TotpProvider, TotpActiveKey)).CheckErrors();
-        owner.SetCheckInTwoFactor(false);
+        owner.SetVaultUnlockTwoFactor(false);
         await _owners.UpdateAsync(owner);
+    }
+
+    /// <summary>
+    /// Tắt 2FA KHÔNG cần mã 6 số — dùng khi owner mất thiết bị xác thực (điện thoại cài Authenticator).
+    /// Lối thoát duy nhất là bằng chứng đã dùng để đăng nhập bộ 12 từ khôi phục: owner chỉ gọi được API
+    /// này SAU KHI trình duyệt đã tự giải mã thành công RecoveryWrappedKey bằng 12 từ (xem
+    /// RecoveryTwoFactorModal.tsx) — 12 từ không bao giờ gửi lên server, server không xác minh lại được,
+    /// nên endpoint này tin vào việc trình duyệt đã tự chặn trước đó (cùng mô hình tin cậy với
+    /// change-passphrase: sai 12 từ thì bước giải mã ở trình duyệt đã throw từ trước, không bao giờ gọi
+    /// tới đây). Luôn ghi audit riêng để owner tự phát hiện nếu việc này xảy ra ngoài ý muốn.
+    /// </summary>
+    public async Task DisableTwoFactorViaRecoveryAsync()
+    {
+        var owner = await GetOwnerAsync();
+        if (!owner.VaultUnlockTwoFactorEnabled) return;
+        var user = await _userManager.GetByIdAsync(UserId);
+        (await _userManager.RemoveAuthenticationTokenAsync(user, TotpProvider, TotpActiveKey)).CheckErrors();
+        owner.SetVaultUnlockTwoFactor(false);
+        await _owners.UpdateAsync(owner);
+        await Audit.RecordAsync(new AuditEntry(AuditActions.TwoFactorDisabledViaRecovery, owner.Id, ActorType: AuditActorType.Owner,
+            ActorUserId: owner.Id, ActorName: owner.DisplayName,
+            Detail: "Tắt 2FA bằng bộ 12 từ khôi phục (mất thiết bị xác thực)."));
+    }
+
+    /// <summary>
+    /// Xác thực mã 2FA ở đúng bước mở két: passphrase đã giải mã VaultKey xong TRÊN TRÌNH DUYỆT (không
+    /// qua server), owner còn phải nhập thêm mã 6 số này thì UI mới thực sự hiển thị nội dung đã giải mã.
+    /// Không có tác dụng phụ (không đổi trạng thái) — chỉ trả về đúng/sai để frontend quyết định mở khoá UI.
+    /// </summary>
+    public async Task<bool> VerifyVaultUnlockCodeAsync(EnableTwoFactorInput input)
+    {
+        var owner = await GetOwnerAsync();
+        if (!owner.VaultUnlockTwoFactorEnabled) return true; // chưa bật 2FA thì không cần kiểm tra
+        var secret = await GetTotpSecretAsync(TotpActiveKey);
+        return secret != null && Totp.Verify(secret, input.Code, DateTime.UtcNow);
     }
 
     private async Task<string?> GetTotpSecretAsync(string name)

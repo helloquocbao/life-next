@@ -1,4 +1,5 @@
 using DeathNote.Lifecycle;
+using DeathNote.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.AuditLogging;
@@ -45,6 +46,9 @@ public class DeathNoteDomainModule : AbpModule
 
         // Chính sách vòng đời đọc từ appsettings: "DeathNote:Policy".
         Configure<LifecyclePolicyOptions>(configuration.GetSection("DeathNote:Policy"));
+
+        // Kênh gửi email: "Resend" (API key qua user-secrets / biến môi trường), để trống → SMTP.
+        Configure<ResendOptions>(configuration.GetSection("Resend"));
 
         // Mọi mốc thời gian lưu ở UTC — tránh sai lệch khi owner đi nước ngoài / đổi múi giờ.
         Configure<AbpClockOptions>(options => options.Kind = DateTimeKind.Utc);

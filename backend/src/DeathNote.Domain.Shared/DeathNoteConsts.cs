@@ -3,7 +3,7 @@ namespace DeathNote;
 /// <summary>Hằng số cấp hệ thống.</summary>
 public static class DeathNoteConsts
 {
-    /// <summary>Tiền tố bảng CSDL của nghiệp vụ LifeNext, tách biệt khỏi bảng "Abp*" của framework.</summary>
+    /// <summary>Tiền tố bảng CSDL của nghiệp vụ Death Note, tách biệt khỏi bảng "Abp*" của framework.</summary>
     public const string DbTablePrefix = "Dn";
 
     /// <summary>Schema CSDL (null = schema mặc định "public" của PostgreSQL).</summary>

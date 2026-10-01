@@ -20,6 +20,17 @@ body { -webkit-font-smoothing: antialiased; }
 .case-section .ant-card-head { min-height: 40px; }
 .evidence-preview { width: 100%; height: 70vh; border: 0; }
 .evidence-preview-img { max-width: 100%; max-height: 70vh; display: block; margin: 0 auto; }
+/* Mẫu email: danh sách | trình soạn | xem trước */
+.email-templates { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 12px; align-items: start; }
+.email-template-item { cursor: pointer; padding: 10px 14px !important; border-inline-start: 3px solid transparent; }
+.email-template-item:hover { background: #f3f8f6; }
+.email-template-item.active { background: #eaf3ef; border-inline-start-color: #2f6f5e; }
+.email-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.email-editor .placeholder-tag { cursor: pointer; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.email-preview-subject { padding: 10px 14px; border-bottom: 1px solid #e3e8e6; }
+.email-preview-frame { width: 100%; height: 560px; border: 0; display: block; background: #fff; }
+@media (max-width: 1400px) { .email-editor { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .email-templates { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .gate-grid { grid-template-columns: 1fr; } .state-bar { grid-template-columns: 110px 1fr 40px; } }
 
 /* Tiêu đề & số liệu lớn dùng font serif (theo bản mockup UI), phần còn lại giữ sans mặc định. */

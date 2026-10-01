@@ -1,0 +1,86 @@
+# =============================================================================
+# LifeNext — PRODUCTION (server 163.61.72.37)
+# -----------------------------------------------------------------------------
+#   Backend API : https://deathnote-api.nonlastamp.com  (nginx host → 127.0.0.1:5080 → container :8080)
+#   Frontend    : Vercel (owner-web, admin-console) — URL khai báo trong .env
+#
+# Chạy trên server (thư mục /opt/lifenext/deploy/production):
+#   docker compose up -d --build
+# Hoặc từ máy dev: ./deploy/production/deploy.sh
+#
+# Bí mật nằm trong .env và secrets/openiddict.pfx — KHÔNG commit (xem .env.example).
+# =============================================================================
+name: lifenext
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: DeathNote
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ../../backend
+    image: lifenext-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5080:8080"   # chỉ nginx trên host truy cập được
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Tin header X-Forwarded-* từ nginx để OpenIddict nhận đúng scheme https / issuer.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+
+      App__SelfUrl: https://${API_DOMAIN:?}
+      App__CorsOrigins: ${APP_URL:?},${ADMIN_URL:?}
+      App__RedirectAllowedUrls: ${APP_URL},${ADMIN_URL}
+      App__MigrateOnStartup: "true"   # chưa có DbMigrator riêng — host tự migrate + seed OIDC client
+      App__Clients__AppUrl: ${APP_URL}
+      App__Clients__AdminUrl: ${ADMIN_URL}
+
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=DeathNote;Username=postgres;Password=${POSTGRES_PASSWORD}
+
+      AuthServer__Authority: https://${API_DOMAIN}
+      AuthServer__RequireHttpsMetadata: "true"
+      AuthServer__CertificatePassPhrase: ${OPENIDDICT_CERT_PASSPHRASE:?}
+
+      OpenIddict__Applications__DeathNote_App__RootUrl: ${APP_URL}
+      OpenIddict__Applications__DeathNote_Admin__RootUrl: ${ADMIN_URL}
+      OpenIddict__Applications__DeathNote_Swagger__RootUrl: https://${API_DOMAIN}
+
+      # SSO Google cho owner — trống = tắt. Phải trùng VITE_GOOGLE_CLIENT_ID của owner-web.
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+
+      DeathNote__CheckInLinkSecret: ${CHECKIN_LINK_SECRET:?}
+      DeathNote__SeedDemoUsers: "false"
+
+      Settings__Abp.Mailing.DefaultFromAddress: ${SMTP_FROM}
+      Settings__Abp.Mailing.Smtp.Host: ${SMTP_HOST}
+      Settings__Abp.Mailing.Smtp.Port: ${SMTP_PORT}
+      Settings__Abp.Mailing.Smtp.UserName: ${SMTP_USER}
+      Settings__Abp.Mailing.Smtp.Password: ${SMTP_PASSWORD}
+      Settings__Abp.Mailing.Smtp.EnableSsl: ${SMTP_ENABLE_SSL}
+      # Có RESEND_API_KEY → gửi qua Resend HTTP API (bỏ qua SMTP ở trên)
+      Resend__ApiKey: ${RESEND_API_KEY:-}
+      Resend__FromAddress: ${RESEND_FROM:-Death Note <onboarding@resend.dev>}
+    volumes:
+      - ./secrets/openiddict.pfx:/app/openiddict.pfx:ro
+      - blobs:/app/App_Data
+      - logs:/app/Logs
+      - dpkeys:/home/app/.aspnet   # giữ khoá DataProtection qua các lần deploy → không văng phiên đăng nhập
+
+volumes:
+  pgdata:
+  blobs:
+  logs:
+  dpkeys:

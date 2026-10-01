@@ -1,4 +1,5 @@
 using DeathNote.AuditTrail;
+using DeathNote.Notifications;
 using DeathNote.Owners;
 using DeathNote.Releases;
 using DeathNote.Trustees;
@@ -36,6 +37,7 @@ public class DeathNoteDbContext : AbpDbContext<DeathNoteDbContext>
     public DbSet<UserKeyring> UserKeyrings { get; set; }
     public DbSet<ReleaseRequest> ReleaseRequests { get; set; }
     public DbSet<AuditEvent> AuditEvents { get; set; }
+    public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
     public DeathNoteDbContext(DbContextOptions<DeathNoteDbContext> options) : base(options) { }
 
@@ -50,9 +52,19 @@ public class DeathNoteDbContext : AbpDbContext<DeathNoteDbContext>
         builder.ConfigureIdentity();
         builder.ConfigureOpenIddict();
 
-        // Bảng nghiệp vụ LifeNext (tiền tố "Dn")
+        // Bảng nghiệp vụ Death Note (tiền tố "Dn")
         const string p = DeathNoteConsts.DbTablePrefix;
         const string? s = DeathNoteConsts.DbSchema;
+
+        builder.Entity<EmailTemplate>(b =>
+        {
+            b.ToTable(p + "EmailTemplates", s);
+            b.ConfigureByConvention();
+            b.Property(x => x.Key).HasMaxLength(EmailTemplateKeys.MaxKeyLength).IsRequired();
+            b.Property(x => x.Subject).HasMaxLength(EmailTemplateKeys.MaxSubjectLength).IsRequired();
+            b.Property(x => x.BodyHtml).IsRequired(); // text
+            b.HasIndex(x => x.Key).IsUnique();
+        });
 
         builder.Entity<OwnerProfile>(b =>
         {

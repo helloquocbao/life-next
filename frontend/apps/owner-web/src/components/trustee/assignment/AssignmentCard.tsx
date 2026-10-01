@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button, Card, Typography } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { TrusteePhase, type AssignmentDto, type KeyringDto } from '@deathnote/api';
-import { roleLabel } from '../../lib/labels';
+import { roleLabel } from '../../../lib/trusteeLabels';
 import { ActivityDrawer } from '../ActivityDrawer';
 import { AlertPhase } from './AlertPhase';
 import { InitiateReleaseModal } from './InitiateReleaseModal';

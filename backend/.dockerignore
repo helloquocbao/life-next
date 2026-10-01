@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/Logs/
+**/App_Data/
+**/node_modules/
+**/.DS_Store
+**/*.user
+**/appsettings.secrets.json
+**/openiddict.pfx
+test/
+.vs/

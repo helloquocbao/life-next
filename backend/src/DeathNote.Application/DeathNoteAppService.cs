@@ -5,7 +5,7 @@ using Volo.Abp.Users;
 
 namespace DeathNote;
 
-/// <summary>Lớp cơ sở cho mọi application service của LifeNext.</summary>
+/// <summary>Lớp cơ sở cho mọi application service của Death Note.</summary>
 public abstract class DeathNoteAppService : ApplicationService
 {
     protected DeathNoteAppService()

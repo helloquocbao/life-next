@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, Checkbox, Flex, Progress, Typography } from 'antd';
 import type { VaultItemData } from '@deathnote/crypto';
-import { buildChecklist, loadChecklist, saveChecklist } from '../../lib/itemKinds';
+import { buildChecklist, loadChecklist, saveChecklist } from '../../lib/checklist';
 
 export function Checklist({ trusteeId, items }: { trusteeId: string; items: { id: string; data: VaultItemData }[] }) {
   const tasks = useMemo(() => buildChecklist(items), [items]);

@@ -9,7 +9,7 @@ public class DeathNotePermissionDefinitionProvider : PermissionDefinitionProvide
 {
     public override void Define(IPermissionDefinitionContext context)
     {
-        var group = context.AddGroup(DeathNotePermissions.GroupName, L("Vận hành LifeNext"));
+        var group = context.AddGroup(DeathNotePermissions.GroupName, L("Vận hành Death Note"));
 
         group.AddPermission(DeathNotePermissions.Dashboard, L("Dashboard vận hành"));
 
@@ -22,6 +22,9 @@ public class DeathNotePermissionDefinitionProvider : PermissionDefinitionProvide
 
         var policy = group.AddPermission(DeathNotePermissions.Policy.Default, L("Xem chính sách vòng đời"));
         policy.AddChild(DeathNotePermissions.Policy.Manage, L("Đề xuất thay đổi chính sách"));
+
+        var templates = group.AddPermission(DeathNotePermissions.EmailTemplates.Default, L("Xem mẫu email"));
+        templates.AddChild(DeathNotePermissions.EmailTemplates.Manage, L("Chỉnh sửa mẫu email"));
     }
 
     private static LocalizableString L(string name) => LocalizableString.Create<DeathNoteResource>(name);

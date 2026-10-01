@@ -52,10 +52,11 @@ export function useCompleteOnboarding() {
   });
 }
 
+/** Check-in không yêu cầu 2FA — 2FA chỉ áp dụng ở bước mở két, xem UnlockGate. */
 export function useCheckIn() {
   const invalidate = useInvalidateOwner();
   return useMutation({
-    mutationFn: (twoFactorCode?: string) => unwrap(api.POST('/api/app/owner/check-in', { body: { twoFactorCode } })),
+    mutationFn: () => unwrap(api.POST('/api/app/owner/check-in', { body: {} })),
     onSuccess: invalidate,
   });
 }

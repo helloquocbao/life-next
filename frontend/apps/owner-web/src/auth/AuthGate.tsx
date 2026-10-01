@@ -1,21 +1,17 @@
-/**
- * Chặn các trang cần đăng nhập: chưa có phiên → chuyển tới trang đăng nhập của backend (OIDC).
- */
+/** Chặn các trang cần đăng nhập: chưa có phiên → hiện form đăng nhập ngay tại đây (kiểu REST API). */
 import { useEffect, useState, type ReactNode } from 'react';
-import { FullPageSpin } from '@deathnote/ui';
+import { FullPageSpin, LoginForm } from '@deathnote/ui';
 import type { User } from '@deathnote/api';
-import { auth } from '../config';
+import { auth, GOOGLE_CLIENT_ID } from '../config';
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
   useEffect(() => {
-    auth.getUser().then((u) => {
-      if (!u || u.expired) void auth.login();
-      else setUser(u);
-    });
+    auth.getUser().then((u) => setUser(u && !u.expired ? u : null));
   }, []);
 
-  if (!user) return <FullPageSpin tip="Đang chuyển tới trang đăng nhập…" />;
+  if (user === undefined) return <FullPageSpin />;
+  if (!user) return <LoginForm auth={auth} onSuccess={setUser} googleClientId={GOOGLE_CLIENT_ID} />;
   return <>{children}</>;
 }

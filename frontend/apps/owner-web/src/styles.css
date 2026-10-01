@@ -3,14 +3,35 @@ html, body, #root { margin: 0; min-height: 100%; background: #f6f8f7; }
 body { -webkit-font-smoothing: antialiased; }
 .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
 .page-narrow { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+/* Các trang vai trò trustee (Hồ sơ tôi giữ giúp, Hộp nhận, lời mời…) — tập trung đọc, hẹp hơn dashboard owner. */
+.page-trustee { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
 .muted { color: #6b7a80; }
 .recovery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .recovery-grid > div { border: 1px dashed #c9d3cf; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Menlo, monospace; background: #fff; }
 .secret-mask { letter-spacing: 3px; }
 @media (max-width: 640px) { .recovery-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Từ trustee-web (gộp vào): câu mở đầu lớn + hàng nút hành động to trên các màn trustee. */
+.lead { font-size: 22px; line-height: 1.45; font-weight: 600; margin: 0; }
+.big-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.big-actions .ant-btn { flex: 1 1 240px; height: 64px; font-size: 18px; }
+/* Bảng nhãn/giá trị 2 cột (VD chi tiết hạng mục trong Hộp nhận) — xuống 1 cột khi màn hẹp. */
+.field-row { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; padding: 6px 0; border-bottom: 1px dashed #e3e8e6; }
+.field-row:last-child { border-bottom: none; }
+.field-value { word-break: break-word; white-space: pre-wrap; }
+@media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+/* Thư mở đầu (Hộp nhận) — toàn màn hình, typography lớn, nền giấy dịu mắt. */
+.letter-screen { position: fixed; inset: 0; z-index: 1000; background: #fbfaf6; overflow-y: auto; }
+.letter-inner { max-width: 680px; margin: 0 auto; padding: 64px 24px 96px; }
+.letter-body { font-family: Georgia, "Times New Roman", serif; font-size: 22px; line-height: 1.75; white-space: pre-wrap; color: #1f2a2e; }
+/* Chỉ hiện khi in (vd. giá trị bí mật không che khi in) / chỉ hiện trên màn hình. */
+.print-only { display: none; }
+
 @media print {
-  .no-print, .ant-layout-header, .ant-layout-footer { display: none !important; }
-  .page, .page-narrow { max-width: none; padding: 0; }
+  .no-print, .screen-only, .ant-layout-header, .ant-layout-footer, .ant-alert-banner { display: none !important; }
+  .print-only { display: inline !important; }
+  .page, .page-narrow, .page-trustee { max-width: none; padding: 0; }
+  .ant-card { break-inside: avoid; box-shadow: none !important; }
 }
 
 /* Tiêu đề & số liệu lớn dùng font serif (theo bản mockup UI), phần còn lại giữ sans mặc định. */
@@ -19,6 +40,28 @@ h1, h2, h3, h4, h5,
 .ant-card-head-title, .ant-statistic-content, .font-serif {
   font-family: 'Lora', Georgia, 'Times New Roman', serif !important;
   letter-spacing: -0.01em;
+}
+
+/*
+ * AntD Tabs: khi danh sách tab rộng hơn khung chứa, AntD tự chuyển sang nút "..." xổ xuống — nhưng cơ
+ * chế đó không kích hoạt đáng tin cậy ở màn hẹp trong app này (nút operations vẫn rỗng), khiến các tab
+ * cuối (VD "Nhật ký hoạt động", "Gói dịch vụ") bị cắt mất, không cách nào bấm tới. Ép nav-wrap tự cuộn
+ * ngang bằng tay (vuốt) để luôn vào được mọi tab, bất kể AntD có tự xử lý overflow hay không.
+ */
+.ant-tabs-nav-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.ant-tabs-nav-wrap::-webkit-scrollbar { display: none; }
+/* Dải mờ bên phải gợi ý còn tab ẩn có thể vuốt sang xem (vì đã ẩn thanh cuộn ở trên). */
+.ant-tabs-nav { position: relative; }
+.ant-tabs-nav::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 24px; pointer-events: none;
+  background: linear-gradient(to right, transparent, #f6f8f7);
+}
+
+/* AntD Card mặc định cắt-chữ-ba-chấm phần title khi có `extra` (VD tag "Đang bật"/"Chưa bật") cùng
+   hàng — trên màn hẹp tiêu đề dài bị cụt khó đọc. Cho phép xuống dòng thay vì cắt. */
+@media (max-width: 480px) {
+  .ant-card-head-wrapper { flex-wrap: wrap; row-gap: 6px; }
+  .ant-card-head-title { white-space: normal !important; overflow: visible !important; text-overflow: unset !important; }
 }
 
 /* Nhãn viết hoa nhỏ trên đầu mỗi khối thông tin — theo mẫu UI ("CHECK-IN TIẾP THEO", "MỨC ĐỘ SẴN SÀNG"). */

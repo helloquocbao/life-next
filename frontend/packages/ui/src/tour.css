@@ -1,6 +1,6 @@
 /**
  * Ghi đè TOÀN BỘ giao diện mặc định của driver.js (không chỉ nút chính) để đồng bộ với AntD +
- * màu thương hiệu LifeNext. Danh sách class gốc: node_modules/driver.js/dist/driver.css
+ * màu thương hiệu Death Note. Danh sách class gốc: node_modules/driver.js/dist/driver.css
  *
  * Trước đây chỉ style nút Tiếp theo/Xong nên các phần còn lại (khung popover, nút đóng, mũi tên,
  * nút Quay lại) vẫn dùng giao diện mặc định của driver.js → nhìn không đồng bộ, "không đều".

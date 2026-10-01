@@ -8,7 +8,7 @@
 import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Badge, Button, Layout, Menu, Result, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd';
-import { AuditOutlined, DashboardOutlined, InboxOutlined, LogoutOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
+import { AuditOutlined, DashboardOutlined, MailOutlined, InboxOutlined, LogoutOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import { Brand, DemoBanner, FullPageSpin, errorMessage } from '@deathnote/ui';
 import { auth } from '../config';
 import { useProfile, useReleaseQueue } from '../lib/api-hooks';
@@ -46,6 +46,7 @@ export function AdminLayout() {
       });
     if (hasPerm(profile, Perm.AuditLog)) list.push({ key: '/audit', icon: <AuditOutlined />, label: 'Audit log' });
     if (hasPerm(profile, Perm.Policy)) list.push({ key: '/policy', icon: <SafetyCertificateOutlined />, label: 'Chính sách' });
+    if (hasPerm(profile, Perm.EmailTemplates)) list.push({ key: '/email-templates', icon: <MailOutlined />, label: 'Mẫu email' });
     return list;
   }, [profile, pendingCount]);
 

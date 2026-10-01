@@ -1,11 +1,8 @@
 using DeathNote.AuditTrail;
 using DeathNote.Common;
-using DeathNote.Infrastructure;
-using DeathNote.Notifications;
 using DeathNote.Owners;
 using DeathNote.Vaults;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
@@ -21,19 +18,17 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
     private readonly IRepository<Vault, Guid> _vaults;
     private readonly IRepository<KeyShare, Guid> _keyShares;
     private readonly IRepository<Grant, Guid> _grants;
-    private readonly INotificationSender _notifier;
-    private readonly DeathNoteAppUrlOptions _urls;
+    private readonly TrusteeInvitationSender _invitationSender;
 
     public TrusteeAppService(IRepository<Trustee, Guid> trustees, IRepository<OwnerProfile, Guid> owners, IRepository<Vault, Guid> vaults,
-        IRepository<KeyShare, Guid> keyShares, IRepository<Grant, Guid> grants, INotificationSender notifier, IOptions<DeathNoteAppUrlOptions> urls)
+        IRepository<KeyShare, Guid> keyShares, IRepository<Grant, Guid> grants, TrusteeInvitationSender invitationSender)
     {
         _trustees = trustees;
         _owners = owners;
         _vaults = vaults;
         _keyShares = keyShares;
         _grants = grants;
-        _notifier = notifier;
-        _urls = urls.Value;
+        _invitationSender = invitationSender;
     }
 
     public async Task<List<TrusteeDto>> GetListAsync()
@@ -48,6 +43,11 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
             grants.FirstOrDefault(g => g.TrusteeId == t.Id)?.ItemCount ?? 0)).ToList();
     }
 
+    /// <summary>
+    /// Chỉ THÊM người được uỷ quyền — KHÔNG gửi lời mời ngay (owner không muốn họ biết trước).
+    /// Lời mời chỉ được gửi khi owner chủ động bấm "Gửi lời mời ngay" (<see cref="ResendInvitationAsync"/>)
+    /// hoặc tự động khi owner bị Missed (xem <see cref="DeathNote.Lifecycle.LifecycleManager"/>).
+    /// </summary>
     public async Task<TrusteeDto> CreateAsync(SaveTrusteeInput input)
     {
         var owner = await GetOwnerAsync();
@@ -56,12 +56,11 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
 
         var trustee = new Trustee(GuidGenerator.Create(), owner.Id, input.DisplayName, input.Email, input.PhoneNumber,
             input.Relationship, input.Role, Clock.Now);
-        var token = trustee.IssueInvitationToken(Clock.Now);
         await _trustees.InsertAsync(trustee, autoSave: true);
 
-        await SendInvitationAsync(owner, trustee, token);
-        await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeInvited, owner.Id, trustee.Id, AuditActorType.Owner,
-            owner.Id, owner.DisplayName, nameof(Trustee), trustee.Id.ToString(), $"{trustee.DisplayName} — {trustee.Role}"));
+        await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeAdded, owner.Id, trustee.Id, AuditActorType.Owner,
+            owner.Id, owner.DisplayName, nameof(Trustee), trustee.Id.ToString(),
+            $"{trustee.DisplayName} — {trustee.Role} (chưa gửi lời mời, sẽ tự gửi khi đến hạn)"));
         return trustee.ToDto(false, 0);
     }
 
@@ -89,27 +88,17 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
             UserId, CurrentUserDisplayName, nameof(Trustee), id.ToString(), trustee.DisplayName));
     }
 
+    /// <summary>
+    /// Gửi lời mời — dùng cho cả "gửi lời mời ngay" (trustee đang NotInvitedYet, owner chủ động chọn
+    /// tiết lộ sớm cho người này) lẫn "gửi lại" (trustee đã từng mời nhưng chưa phản hồi).
+    /// </summary>
     public async Task ResendInvitationAsync(Guid id)
     {
         var owner = await GetOwnerAsync();
         var trustee = await GetMyTrusteeAsync(id);
-        var token = trustee.IssueInvitationToken(Clock.Now);
-        await _trustees.UpdateAsync(trustee);
-        await SendInvitationAsync(owner, trustee, token);
-    }
-
-    private async Task SendInvitationAsync(OwnerProfile owner, Trustee trustee, string token)
-    {
-        var roleName = trustee.Role switch
-        {
-            TrusteeRole.KeyHolder => "người giữ mảnh khoá",
-            TrusteeRole.Verifier => "người xác nhận",
-            _ => "người nhận nội dung"
-        };
-        var link = $"{_urls.TrusteeUrl}/invite?token={Uri.EscapeDataString(token)}";
-        var (subject, body) = NotificationTemplates.TrusteeInvitation(trustee.DisplayName, owner.DisplayName, roleName, link);
-        await _notifier.SendAsync(new NotificationMessage(trustee.DisplayName, trustee.Email, trustee.PhoneNumber, subject, body,
-            NotificationChannels.Email | NotificationChannels.Sms));
+        await _invitationSender.SendAsync(owner, trustee, Clock.Now);
+        await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeInvited, owner.Id, trustee.Id, AuditActorType.Owner,
+            owner.Id, owner.DisplayName, nameof(Trustee), trustee.Id.ToString(), $"{trustee.DisplayName} — {trustee.Role} (owner chủ động gửi)"));
     }
 
     private async Task MarkKeysOutdatedAsync()

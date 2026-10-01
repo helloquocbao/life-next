@@ -1,7 +1,7 @@
 {
   "culture": "en",
   "texts": {
-    "AppName": "LifeNext",
+    "AppName": "Death Note",
     "DeathNote:00001": "Please complete onboarding first.",
     "DeathNote:00002": "Check-in interval must be 7, 14, 30 or 90 days.",
     "DeathNote:00003": "Grace period must be between 7 and 30 days.",
@@ -30,6 +30,10 @@
     "DeathNote:03008": "System administrators cannot approve vault releases.",
     "DeathNote:03009": "Data has not been released yet.",
     "DeathNote:03010": "Evidence file exceeds 10 MB.",
-    "DeathNote:03011": "This request is closed."
+    "DeathNote:03011": "This request is closed.",
+    "DeathNote:04001": "Email template not found.",
+    "DeathNote:04002": "Template uses unsupported placeholders: {Names}. Allowed: {Allowed}.",
+    "DeathNote:04003": "The email layout must contain the {{content}} placeholder.",
+    "DeathNote:04004": "Sending email failed: {Reason}"
   }
 }

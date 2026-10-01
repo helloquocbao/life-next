@@ -40,4 +40,11 @@ public static class DeathNotePermissions
         public const string Default = GroupName + ".Policy";
         public const string Manage = Default + ".Manage";
     }
+
+    /// <summary>Mẫu email gửi cho owner/trustee: xem và chỉnh sửa nội dung.</summary>
+    public static class EmailTemplates
+    {
+        public const string Default = GroupName + ".EmailTemplates";
+        public const string Manage = Default + ".Manage";
+    }
 }

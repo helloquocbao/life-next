@@ -1,7 +1,7 @@
 {
   "culture": "vi",
   "texts": {
-    "AppName": "LifeNext",
+    "AppName": "Death Note",
     "DeathNote:00001": "Bạn cần hoàn tất bước thiết lập ban đầu trước.",
     "DeathNote:00002": "Nhịp check-in chỉ được chọn 7, 14, 30 hoặc 90 ngày.",
     "DeathNote:00003": "Thời gian ân hạn phải trong khoảng 7–30 ngày.",
@@ -30,6 +30,10 @@
     "DeathNote:03008": "Quản trị hệ thống không có quyền duyệt mở vault.",
     "DeathNote:03009": "Dữ liệu chưa được bàn giao.",
     "DeathNote:03010": "Tệp bằng chứng vượt quá 10 MB.",
-    "DeathNote:03011": "Yêu cầu này đã đóng."
+    "DeathNote:03011": "Yêu cầu này đã đóng.",
+    "DeathNote:04001": "Không tìm thấy mẫu email.",
+    "DeathNote:04002": "Mẫu email dùng biến không hỗ trợ: {Names}. Biến hợp lệ: {Allowed}.",
+    "DeathNote:04003": "Khung email phải chứa biến {{content}} để chèn nội dung thư.",
+    "DeathNote:04004": "Gửi email thất bại: {Reason}"
   }
 }

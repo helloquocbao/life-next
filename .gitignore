@@ -21,3 +21,7 @@ frontend/**/dist/
 
 # IDE khác (giữ lại .vscode/settings.json — cấu hình chung của dự án)
 .idea/
+
+# Bí mật production (chỉ nằm trên server)
+deploy/production/.env
+deploy/production/secrets/

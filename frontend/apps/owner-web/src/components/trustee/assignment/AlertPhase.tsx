@@ -10,8 +10,9 @@ import { App, Alert, Button, Flex, Typography } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { ContactResponse, ReleaseStatus, TrusteeRole, type AssignmentDto } from '@deathnote/api';
 import { ErrorAlert, formatDateTime } from '@deathnote/ui';
-import { useRespondContact } from '../../lib/api-hooks';
-import { useCountdown } from '../../lib/time';
+import { RELEASE_FLOW_ENABLED } from '../../../config';
+import { useRespondContact } from '../../../lib/trusteePortalHooks';
+import { useCountdown } from '../../../lib/useServerClock';
 
 export function AlertPhase({ a, onInitiate }: { a: AssignmentDto; onInitiate: () => void }) {
   const { message } = App.useApp();
@@ -62,8 +63,10 @@ export function AlertPhase({ a, onInitiate }: { a: AssignmentDto; onInitiate: ()
       {answered && a.myContactResponse === ContactResponse.CannotReach && (
         <>
           <Alert type="warning" showIcon style={{ marginBottom: 16 }} title="Chúng tôi đã ghi nhận."
-            description="Hãy tiếp tục thử liên lạc qua người thân, bạn bè hoặc nơi làm việc của họ. Nếu đến hạn vẫn không liên lạc được, bạn có thể khởi tạo yêu cầu mở." />
-          <InitiateBlock a={a} onInitiate={onInitiate} />
+            description={RELEASE_FLOW_ENABLED
+              ? 'Hãy tiếp tục thử liên lạc qua người thân, bạn bè hoặc nơi làm việc của họ. Nếu đến hạn vẫn không liên lạc được, bạn có thể khởi tạo yêu cầu mở.'
+              : 'Hãy tiếp tục thử liên lạc qua người thân, bạn bè hoặc nơi làm việc của họ. PICO sẽ liên hệ bạn với các bước tiếp theo.'} />
+          {RELEASE_FLOW_ENABLED && <InitiateBlock a={a} onInitiate={onInitiate} />}
         </>
       )}
 

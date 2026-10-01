@@ -23,7 +23,7 @@ export async function uploadEvidence(requestId: string, kind: EvidenceKind, file
   });
 
   if (res.status === 401) {
-    void auth.login();
+    void auth.logout();
     throw new ApiError('Phiên đăng nhập đã hết hạn.', 401);
   }
   if (!res.ok) {

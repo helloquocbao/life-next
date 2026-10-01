@@ -1,18 +1,20 @@
 /**
- * Khung trang đơn giản: header trắng (logo + tên người dùng + Đăng xuất), dải DemoBanner khi thời gian
- * được nén, nội dung ở giữa rộng ~720px. Dùng cho cả trang công khai (lời mời) lẫn trang cần đăng nhập.
+ * Khung trang đơn giản (KHÔNG có sidebar): header trắng (logo + tên người dùng + Đăng xuất), dải
+ * DemoBanner khi thời gian được nén, nội dung ở giữa rộng ~720px. Chỉ dùng cho trang lời mời — trang
+ * này công khai (xem được trước khi đăng nhập) nên không thể nằm sau AuthGate + sidebar như các trang
+ * còn lại của vai trò trustee (xem router.tsx).
  */
 import type { ReactNode } from 'react';
 import { Link, Outlet } from 'react-router';
 import { Button, Flex, Layout, Typography } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
 import { Brand, DemoBanner } from '@deathnote/ui';
-import { auth } from '../config';
-import { displayName, useCurrentUser } from '../auth/useCurrentUser';
-import { useAssignments } from '../lib/api-hooks';
-import { useInboxSession } from '../session/inboxSession';
+import { auth } from '../../config';
+import { displayName, useCurrentUser } from '../../auth/useCurrentUser';
+import { useAssignments } from '../../lib/trusteePortalHooks';
+import { useInboxSession } from '../../session/inboxSession';
 
-export function AppLayout({ children }: { children?: ReactNode }) {
+export function PublicLayout({ children }: { children?: ReactNode }) {
   const user = useCurrentUser();
   // Hệ số nén thời gian lấy từ assignments (dùng chung cache với Home, không gọi thêm).
   const assignments = useAssignments(!!user);
@@ -38,7 +40,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       </Layout.Header>
       <DemoBanner timeScale={timeScale} />
       <Layout.Content>
-        <div className="page">{children ?? <Outlet />}</div>
+        <div className="page-trustee">{children ?? <Outlet />}</div>
       </Layout.Content>
     </Layout>
   );

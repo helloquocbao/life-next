@@ -20,7 +20,7 @@ public class Program
 
         try
         {
-            Log.Information("Khởi động LifeNext API…");
+            Log.Information("Khởi động Death Note API…");
             var builder = WebApplication.CreateBuilder(args);
             builder.Host.AddAppSettingsSecretsJson().UseAutofac().UseSerilog();
             await builder.AddApplicationAsync<DeathNoteHttpApiHostModule>();
