@@ -44,11 +44,11 @@ export function QueuePage() {
 
   const columns: TableColumnsType<ReleaseQueueItemDto> = [
     {
-      title: 'Owner', dataIndex: 'ownerName', width: 170, ellipsis: true,
+      title: 'Owner', dataIndex: 'ownerName', width: 150, ellipsis: true,
       render: (v: string | null) => <Typography.Text strong>{v || '—'}</Typography.Text>,
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', width: 200,
+      title: 'Trạng thái', dataIndex: 'status', width: 170,
       render: (s: ReleaseStatus, r) => (
         <Space orientation="vertical" size={0}>
           <Tag color={releaseStatusColor[s]} style={{ marginInlineEnd: 0 }}>{releaseStatusLabel[s]}</Tag>
@@ -58,7 +58,7 @@ export function QueuePage() {
         </Space>
       ),
     },
-    { title: 'Lý do', dataIndex: 'reason', width: 110, render: (v: ReleaseReason) => releaseReasonLabel[v] },
+    { title: 'Lý do', dataIndex: 'reason', width: 100, render: (v: ReleaseReason) => releaseReasonLabel[v] },
     {
       title: 'Đồng thuận', key: 'consent', width: 100, align: 'center',
       render: (_, r) => {
@@ -81,13 +81,13 @@ export function QueuePage() {
         ),
     },
     {
-      title: 'Vòng / Phiếu', key: 'round', width: 110,
+      title: 'Vòng / Phiếu', key: 'round', width: 104,
       render: (_, r) => (
         <span>V{r.reviewRound ?? 1}{r.currentStage ? <> · phiếu <b>{r.currentStage}</b>/2</> : ''}</span>
       ),
     },
     {
-      title: 'Hạn SLA', dataIndex: 'slaDueAt', width: 170,
+      title: 'Hạn SLA', dataIndex: 'slaDueAt', width: 160,
       render: (v: string | null, r) => {
         if (!v) return <Typography.Text type="secondary">—</Typography.Text>;
         // Thời gian còn lại tính theo "giờ nghiệp vụ" (nhân hệ số nén demo) để khớp với chính sách SLA ngày.
@@ -106,7 +106,7 @@ export function QueuePage() {
       },
     },
     {
-      title: 'Khởi tạo lúc', dataIndex: 'initiatedAt', width: 150,
+      title: 'Khởi tạo lúc', dataIndex: 'initiatedAt', width: 140,
       render: (v: string) => <Tooltip title={formatRelative(v)}>{formatDateTime(v)}</Tooltip>,
     },
   ];
@@ -117,29 +117,31 @@ export function QueuePage() {
         title="Hàng chờ mở vault"
         subtitle="Mỗi hồ sơ cần 2 phiếu độc lập: phiếu 1 (thẩm định) và phiếu 2 (phê duyệt) do hai người khác nhau thực hiện."
       />
-      <Tabs activeKey={tab} onChange={(k) => setTab(k as QueueTab)} items={TABS.map((t) => ({ key: t.key, label: t.label }))} />
       <ErrorAlert error={error} style={{ marginBottom: 12 }} />
-      <Table<ReleaseQueueItemDto>
-        className="queue-table"
-        rowKey={(r) => r.id ?? ''}
-        size="small"
-        columns={columns}
-        dataSource={data?.items ?? []}
-        loading={isLoading || (isFetching && !data)}
-        scroll={{ x: 1250 }}
-        rowClassName={(r) => [r.isSlaOverdue ? 'row-overdue' : '', r.id === caseId ? 'ant-table-row-selected' : ''].join(' ')}
-        onRow={(r) => ({ onClick: () => openCase(r.id) })}
-        locale={{ emptyText: 'Không có hồ sơ nào trong mục này' }}
-        pagination={{
-          current: page,
-          pageSize,
-          total: data?.totalCount ?? 0,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
-          showTotal: (t) => `${t} hồ sơ`,
-          onChange: setPage,
-        }}
-      />
+      <div className="panel">
+        <Tabs activeKey={tab} onChange={(k) => setTab(k as QueueTab)} items={TABS.map((t) => ({ key: t.key, label: t.label }))} />
+        <Table<ReleaseQueueItemDto>
+          className="queue-table"
+          rowKey={(r) => r.id ?? ''}
+          size="small"
+          columns={columns}
+          dataSource={data?.items ?? []}
+          loading={isLoading || (isFetching && !data)}
+          scroll={{ x: 'max-content' }}
+          rowClassName={(r) => [r.isSlaOverdue ? 'row-overdue' : '', r.id === caseId ? 'ant-table-row-selected' : ''].join(' ')}
+          onRow={(r) => ({ onClick: () => openCase(r.id) })}
+          locale={{ emptyText: 'Không có hồ sơ nào trong mục này' }}
+          pagination={{
+            current: page,
+            pageSize,
+            total: data?.totalCount ?? 0,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50],
+            showTotal: (t) => `${t} hồ sơ`,
+            onChange: setPage,
+          }}
+        />
+      </div>
       <CaseDrawer caseId={caseId} onClose={() => openCase(undefined)} />
     </>
   );

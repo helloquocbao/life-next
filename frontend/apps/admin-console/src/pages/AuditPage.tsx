@@ -7,7 +7,7 @@
  * - "Xuất CSV": xuất đúng trang đang xem (không tải toàn bộ log về trình duyệt).
  */
 import { useState } from 'react';
-import { Alert, Button, Card, Input, Select, Space, Table, Tag, Tooltip, Typography, type TableColumnsType } from 'antd';
+import { Alert, Button, Input, Select, Space, Table, Tag, Tooltip, Typography, type TableColumnsType } from 'antd';
 import { DownloadOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import type { AuditActorType, AuditEventDto } from '@deathnote/api';
 import { ErrorAlert, auditActionLabel, auditActorTypeLabel, formatDateTime } from '@deathnote/ui';
@@ -125,34 +125,36 @@ export function AuditPage() {
         />
       )}
 
-      <Card size="small" style={{ marginBottom: 12 }}>
-        <Space wrap>
-          <Select allowClear placeholder="Tiền tố hành động" style={{ width: 280 }} options={ACTION_PREFIXES} value={action}
-            onChange={(v?: string) => { setAction(v); setPage(1); }} />
-          <Space.Compact>
-            <Input placeholder="OwnerId (GUID)" style={{ width: 330 }} value={ownerInput} allowClear status={ownerInvalid ? 'error' : undefined}
-              onChange={(e) => { setOwnerInput(e.target.value); if (!e.target.value) { setOwnerId(undefined); setPage(1); } }}
-              onPressEnter={applyOwner} />
-            <Button type="primary" onClick={applyOwner} disabled={ownerInvalid}>Lọc</Button>
-          </Space.Compact>
-          {ownerInvalid && <Typography.Text type="danger" style={{ fontSize: 12 }}>OwnerId phải là GUID</Typography.Text>}
-        </Space>
-      </Card>
-
       <ErrorAlert error={error} style={{ marginBottom: 12 }} />
-      <Table<AuditEventDto>
-        size="small"
-        rowKey={(e) => String(e.sequence)}
-        columns={columns}
-        dataSource={data?.items ?? []}
-        loading={isLoading || isFetching}
-        scroll={{ x: 1250 }}
-        pagination={{
-          current: page, pageSize, total: data?.totalCount ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100],
-          showTotal: (t) => `${t} sự kiện`,
-          onChange: (p, s) => { setPage(p); setPageSize(s); },
-        }}
-      />
+      <div className="panel">
+        <div className="panel-toolbar">
+          <Space wrap>
+            <Select allowClear placeholder="Tiền tố hành động" style={{ width: 280 }} options={ACTION_PREFIXES} value={action}
+              onChange={(v?: string) => { setAction(v); setPage(1); }} />
+            <Space.Compact>
+              <Input placeholder="OwnerId (GUID)" style={{ width: 330 }} value={ownerInput} allowClear status={ownerInvalid ? 'error' : undefined}
+                onChange={(e) => { setOwnerInput(e.target.value); if (!e.target.value) { setOwnerId(undefined); setPage(1); } }}
+                onPressEnter={applyOwner} />
+              <Button type="primary" onClick={applyOwner} disabled={ownerInvalid}>Lọc</Button>
+            </Space.Compact>
+            {ownerInvalid && <Typography.Text type="danger" style={{ fontSize: 12 }}>OwnerId phải là GUID</Typography.Text>}
+          </Space>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Mới nhất trước</Typography.Text>
+        </div>
+        <Table<AuditEventDto>
+          size="small"
+          rowKey={(e) => String(e.sequence)}
+          columns={columns}
+          dataSource={data?.items ?? []}
+          loading={isLoading || isFetching}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            current: page, pageSize, total: data?.totalCount ?? 0, showSizeChanger: true, pageSizeOptions: [20, 50, 100],
+            showTotal: (t) => `${t} sự kiện`,
+            onChange: (p, s) => { setPage(p); setPageSize(s); },
+          }}
+        />
+      </div>
     </>
   );
 }

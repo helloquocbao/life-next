@@ -1,37 +1,135 @@
-/* Kiểu dáng toàn cục tối thiểu của Admin Console — phần còn lại dùng design token của Ant Design (theme admin). */
-html, body, #root { margin: 0; min-height: 100%; background: #f6f8f7; }
+/*
+ * Kiểu dáng toàn cục của Admin Console — phần còn lại dùng design token của Ant Design (theme admin).
+ * Bảng màu bám theo `colors` trong @deathnote/ui (nền xám ấm, sidebar tối, xanh rêu làm điểm nhấn).
+ */
+:root {
+  --line: #E4DFD2;
+  --line-soft: #F0ECE1;
+  --body-bg: #F2F0EA;
+  --surface: #ffffff;
+  --muted: #5E5B54;
+  --primary: #1F5F5B;
+  --primary-soft: #EDF1EF;
+  --amber: #8A5A00;
+  --amber-soft: #FBF3E2;
+  --red: #A31E15;
+  --red-soft: #F9E9E6;
+  --sider-bg: #14211F;
+  --sider-active: #1E312E;
+  --sider-line: #22332F;
+  --sider-muted: #8FA5A0;
+}
+html, body, #root { margin: 0; min-height: 100%; background: var(--body-bg); }
 body { -webkit-font-smoothing: antialiased; }
-.muted { color: #6b7a80; }
+.muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.admin-content { padding: 20px 24px 48px; }
-.page-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.page-title h1 { margin: 0; font-size: 20px; font-weight: 700; }
+
+/* ── Khung: sidebar tối ─────────────────────────────────────────────────── */
+.admin-sider { position: sticky !important; top: 0; height: 100vh; }
+.admin-sider-inner { display: flex; flex-direction: column; height: 100%; }
+.admin-sider-brand { padding: 18px 20px; border-bottom: 1px solid var(--sider-line); }
+.admin-sider-brand.collapsed { padding: 18px 0; display: flex; justify-content: center; }
+.admin-menu { flex: 1; overflow-y: auto; padding: 8px 0; border-inline-end: 0 !important; }
+.admin-menu .ant-menu-item-group-title {
+  color: var(--sider-muted) !important; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; padding: 16px 24px 6px !important;
+}
+.admin-menu .ant-menu-item { border-radius: 8px; margin-inline: 10px; width: calc(100% - 20px); }
+.admin-menu .ant-menu-item-selected { box-shadow: inset 3px 0 0 #6FB3A8; font-weight: 600; }
+.nav-label { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.nav-label .ant-badge-count { box-shadow: none; }
+
+.admin-user { display: flex; align-items: center; gap: 10px; padding: 14px 14px 14px 16px; border-top: 1px solid var(--sider-line); }
+.admin-user.collapsed { flex-direction: column; padding: 12px 0; gap: 6px; }
+.admin-user-avatar { background: var(--primary) !important; color: #fff !important; font-weight: 600; flex-shrink: 0; }
+.admin-user-info { flex: 1; min-width: 0; }
+.admin-user-name { color: #fff !important; font-weight: 600; display: block; }
+.admin-user-roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.admin-user-roles .ant-tag { margin: 0; font-size: 11px; line-height: 18px; padding-inline: 6px; }
+.admin-user-logout { color: var(--sider-muted) !important; }
+.admin-user-logout:hover { color: #fff !important; background: var(--sider-active) !important; }
+
+/* ── Header + nội dung ─────────────────────────────────────────────────── */
+.admin-header {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 56px; line-height: 56px; padding: 0 24px 0 12px; border-bottom: 1px solid var(--line);
+}
+.admin-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; line-height: 1; }
+.admin-breadcrumb .muted { font-weight: 500; }
+.admin-breadcrumb-sep { color: var(--line); font-weight: 400; }
+.admin-content { padding: 24px 28px 48px; }
+.admin-container { max-width: 1440px; margin: 0 auto; }
+
+.page-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.page-title h1 { margin: 0 0 4px; font-size: 24px; font-weight: 600; }
+
+/* Mặt bảng: bảng + tab + bộ lọc nằm chung một khối trắng thay vì trôi trên nền. */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.panel-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); }
+.panel > .ant-tabs > .ant-tabs-nav { margin: 0; padding: 0 16px; }
+.panel .ant-table-wrapper .ant-table-pagination { padding: 0 16px; }
+.panel .ant-table-thead > tr > th { background: #FAF8F3 !important; font-weight: 600; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.panel .ant-table-thead > tr > th::before { display: none; }
+.section-heading { font-family: inherit !important; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+
+/* ── Dashboard ─────────────────────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.kpi-card {
+  display: flex; flex-direction: column; gap: 10px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kpi-card:hover { border-color: #C9C2B0; box-shadow: 0 2px 8px rgba(28, 28, 26, .06); }
+.kpi-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kpi-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+.kpi-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: 15px; }
+.kpi-value { font-family: 'Lora', Georgia, serif; font-size: 34px; font-weight: 600; line-height: 1; }
+.kpi-hint { font-size: 12px; color: var(--muted); }
+.kpi-card.warn { border-color: #E9D3A6; background: var(--amber-soft); }
+.kpi-card.warn .kpi-icon { background: #F3E2BC; color: var(--amber); }
+.kpi-card.warn .kpi-value { color: var(--amber); }
+.kpi-card.danger { border-color: #ECC8C1; background: var(--red-soft); }
+.kpi-card.danger .kpi-icon { background: #F2D3CD; color: var(--red); }
+.kpi-card.danger .kpi-value { color: var(--red); }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 12px; margin-top: 24px; align-items: start; }
+.dash-side { display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.state-bar { display: grid; grid-template-columns: 170px 1fr 48px; align-items: center; gap: 12px; padding: 7px 0; }
+.state-bar + .state-bar { border-top: 1px dashed var(--line-soft); }
+.state-bar-track { height: 10px; border-radius: 5px; background: var(--line-soft); overflow: hidden; }
+.state-bar-fill { height: 100%; border-radius: 5px; transition: width .3s; min-width: 0; }
+
+/* ── Hàng chờ & hồ sơ ──────────────────────────────────────────────────── */
 .queue-table .ant-table-row { cursor: pointer; }
 .queue-table .row-overdue > td { background: #fdf5f3; }
 .gate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.gate-cell { border: 1px solid #e3e8e6; border-radius: 8px; padding: 10px 12px; background: #fff; }
+.gate-cell { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fff; }
 .gate-cell.passed { border-color: #bcd8cf; background: #f3f8f6; }
 .gate-cell.failed { border-color: #ecc8c1; background: #fcf3f1; }
-.state-bar { display: grid; grid-template-columns: 160px 1fr 48px; align-items: center; gap: 12px; padding: 4px 0; }
-.state-bar-track { height: 14px; border-radius: 7px; background: #eef2f0; overflow: hidden; }
-.state-bar-fill { height: 100%; border-radius: 7px; transition: width .3s; }
-.zk-note { font-size: 12px; color: #6b7a80; display: flex; align-items: center; gap: 6px; }
+.zk-note { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .case-section { margin-bottom: 16px; }
 .case-section .ant-card-head { min-height: 40px; }
 .evidence-preview { width: 100%; height: 70vh; border: 0; }
 .evidence-preview-img { max-width: 100%; max-height: 70vh; display: block; margin: 0 auto; }
+
 /* Mẫu email: danh sách | trình soạn | xem trước */
 .email-templates { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 12px; align-items: start; }
 .email-template-item { cursor: pointer; padding: 10px 14px !important; border-inline-start: 3px solid transparent; }
-.email-template-item:hover { background: #f3f8f6; }
-.email-template-item.active { background: #eaf3ef; border-inline-start-color: #2f6f5e; }
+.email-template-item:hover { background: var(--primary-soft); }
+.email-template-item.active { background: #E3ECE8; border-inline-start-color: var(--primary); }
 .email-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .email-editor .placeholder-tag { cursor: pointer; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.email-preview-subject { padding: 10px 14px; border-bottom: 1px solid #e3e8e6; }
+.email-preview-subject { padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .email-preview-frame { width: 100%; height: 560px; border: 0; display: block; background: #fff; }
 @media (max-width: 1400px) { .email-editor { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .email-templates { grid-template-columns: 1fr; } }
-@media (max-width: 900px) { .gate-grid { grid-template-columns: 1fr; } .state-bar { grid-template-columns: 110px 1fr 40px; } }
+@media (max-width: 900px) {
+  .gate-grid { grid-template-columns: 1fr; }
+  .state-bar { grid-template-columns: 110px 1fr 40px; }
+  .admin-content { padding: 16px 16px 40px; }
+}
 
 /* Tiêu đề & số liệu lớn dùng font serif (theo bản mockup UI), phần còn lại giữ sans mặc định. */
 h1, h2, h3, h4, h5,

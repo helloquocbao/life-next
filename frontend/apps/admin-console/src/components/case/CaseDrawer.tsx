@@ -11,7 +11,7 @@
 import { Alert, Descriptions, Drawer, Skeleton, Space, Tag, Typography } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import type { ReleaseReason, ReleaseStatus } from '@deathnote/api';
-import { ErrorAlert, formatDateTime, releaseReasonLabel, releaseStatusColor, releaseStatusLabel } from '@deathnote/ui';
+import { ErrorAlert, colors, formatDateTime, releaseReasonLabel, releaseStatusColor, releaseStatusLabel } from '@deathnote/ui';
 import { usePolicy, useProfile, useReleaseCase } from '../../lib/api-hooks';
 import { hasPerm, Perm } from '../../lib/permissions';
 import { Section } from './Section';
@@ -47,7 +47,7 @@ export function CaseDrawer({ caseId, onClose }: { caseId?: string; onClose: () =
       onClose={onClose}
       size="62%"
       destroyOnHidden
-      styles={{ body: { background: '#f6f8f7', padding: 16 } }}
+      styles={{ body: { background: colors.adminBodyBg, padding: 16 } }}
       title={data ? (
         <Space size={8} wrap>
           <span>Hồ sơ mở vault — {data.owner?.displayName}</span>

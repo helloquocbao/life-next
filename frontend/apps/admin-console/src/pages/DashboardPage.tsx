@@ -28,29 +28,36 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageTitle title="Dashboard" subtitle="Chỉ số liệu tổng hợp, không danh tính." />
+      <PageTitle title="Tổng quan vận hành" subtitle="Chỉ số liệu tổng hợp — không hiển thị danh tính khách hàng hay nội dung két." />
       <ErrorAlert error={error} style={{ marginBottom: 16 }} />
       {isLoading ? <Skeleton active paragraph={{ rows: 8 }} /> : data && (
         <>
-          <Row gutter={[12, 12]}>
+          <h2 className="section-heading">Khối lượng thẩm định</h2>
+          <div className="kpi-grid">
             {[
-              { title: 'Hồ sơ chờ thẩm định', value: data.pendingReviews, icon: <FileSearchOutlined />, color: undefined },
-              { title: 'Quá SLA', value: data.slaOverdue, icon: <AlertOutlined />, color: (data.slaOverdue ?? 0) > 0 ? colors.red : undefined },
-              { title: 'Cần bổ sung bằng chứng', value: data.needsMoreInfo, icon: <ClockCircleOutlined />, color: undefined },
-              { title: 'Đang chờ cuối', value: data.inFinalWait, icon: <HourglassOutlined />, color: undefined },
-              { title: 'Đang thu đồng thuận', value: data.awaitingConsent, icon: <TeamOutlined />, color: undefined },
+              { title: 'Chờ thẩm định', value: data.pendingReviews, icon: <FileSearchOutlined />, hint: 'Cần phiếu 1 hoặc phiếu 2', tone: 'warn' },
+              { title: 'Quá SLA', value: data.slaOverdue, icon: <AlertOutlined />, hint: 'Ưu tiên xử lý ngay', tone: 'danger' },
+              { title: 'Cần bổ sung bằng chứng', value: data.needsMoreInfo, icon: <ClockCircleOutlined />, hint: 'Đang chờ trustee nộp thêm', tone: 'warn' },
+              { title: 'Đang chờ cuối', value: data.inFinalWait, icon: <HourglassOutlined />, hint: 'Owner vẫn có thể huỷ', tone: undefined },
+              { title: 'Đang thu đồng thuận', value: data.awaitingConsent, icon: <TeamOutlined />, hint: 'Chưa đủ m-of-n trustee', tone: undefined },
             ].map((s) => (
-              <Col key={s.title} flex="1 1 180px">
-                <Card size="small" hoverable onClick={() => navigate('/queue')}>
-                  <Statistic title={s.title} value={s.value ?? 0} prefix={s.icon} styles={{ content: { color: s.color, fontWeight: 600 } }} />
-                </Card>
-              </Col>
+              // Chỉ tô màu khi thực sự có việc — thẻ bằng 0 giữ màu trung tính để mắt không bị kéo nhầm chỗ.
+              <button key={s.title} type="button" onClick={() => navigate('/queue')}
+                className={'kpi-card' + ((s.value ?? 0) > 0 && s.tone ? ` ${s.tone}` : '')}>
+                <div className="kpi-head">
+                  <span className="kpi-label">{s.title}</span>
+                  <span className="kpi-icon">{s.icon}</span>
+                </div>
+                <span className="kpi-value">{s.value ?? 0}</span>
+                <span className="kpi-hint">{s.hint}</span>
+              </button>
             ))}
-          </Row>
+          </div>
 
-          <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-            <Col xs={24} lg={14}>
-              <Card size="small" title={`Phân bố trạng thái owner (${data.totalOwners ?? 0} tài khoản)`}>
+          <div className="dash-grid">
+            <div>
+              <h2 className="section-heading">Hồ sơ owner</h2>
+              <Card size="small" title="Phân bố trạng thái" extra={<Typography.Text type="secondary">{data.totalOwners ?? 0} tài khoản</Typography.Text>}>
                 {breakdown.map((s) => {
                   const state = (s.state ?? 0) as LifecycleState;
                   const count = s.count ?? 0;
@@ -66,9 +73,10 @@ export function DashboardPage() {
                   );
                 })}
               </Card>
-            </Col>
-            <Col xs={24} lg={10}>
-              <Card size="small" title="Két dữ liệu (chỉ metadata)">
+            </div>
+            <div className="dash-side">
+              <h2 className="section-heading" style={{ marginBottom: -2 }}>Hệ thống</h2>
+              <Card size="small" title="Két dữ liệu" extra={<Typography.Text type="secondary">chỉ metadata</Typography.Text>}>
                 <Row gutter={12}>
                   <Col span={12}><Statistic title="Tổng hạng mục" value={data.totalVaultItems ?? 0} /></Col>
                   <Col span={12}><Statistic title="Tổng dung lượng mã hoá" value={formatBytes(data.totalVaultBytes)} /></Col>
@@ -77,11 +85,11 @@ export function DashboardPage() {
                   Server chỉ lưu ciphertext — PICO không biết và không thể xem nội dung các hạng mục.
                 </Typography.Paragraph>
               </Card>
-              <Card size="small" title="Audit log" style={{ marginTop: 12 }}>
+              <Card size="small" title="Audit log" extra={<Typography.Link onClick={() => navigate('/audit')}>Xem nhật ký</Typography.Link>}>
                 <Statistic title="Sự kiện ghi nhận trong 24 giờ qua" value={data.auditEvents24h ?? 0} />
               </Card>
-            </Col>
-          </Row>
+            </div>
+          </div>
         </>
       )}
     </>

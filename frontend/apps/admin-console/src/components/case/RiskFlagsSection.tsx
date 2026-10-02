@@ -5,7 +5,7 @@
  */
 import { Tag, Typography } from 'antd';
 import type { RiskFlagDto, RiskSeverity } from '@deathnote/api';
-import { riskSeverityColor, riskSeverityLabel } from '@deathnote/ui';
+import { colors, riskSeverityColor, riskSeverityLabel } from '@deathnote/ui';
 
 export function RiskFlagsSection({ flags }: { flags: RiskFlagDto[] }) {
   if (!flags.length) return <Typography.Text type="secondary">Không phát hiện cờ rủi ro nào.</Typography.Text>;
@@ -14,7 +14,7 @@ export function RiskFlagsSection({ flags }: { flags: RiskFlagDto[] }) {
   return (
     <div>
       {sorted.map((f, i) => (
-        <div key={`${f.code}-${i}`} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderTop: i ? '1px solid #e3e8e6' : undefined }}>
+        <div key={`${f.code}-${i}`} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderTop: i ? `1px solid ${colors.line}` : undefined }}>
           <Tag color={riskSeverityColor[(f.severity ?? 0) as RiskSeverity]} style={{ minWidth: 84, textAlign: 'center' }}>
             {riskSeverityLabel[(f.severity ?? 0) as RiskSeverity]}
           </Tag>
