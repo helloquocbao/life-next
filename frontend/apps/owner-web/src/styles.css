@@ -1,5 +1,5 @@
 /* Kiểu dáng toàn cục tối thiểu — phần còn lại dùng design token của Ant Design. */
-html, body, #root { margin: 0; min-height: 100%; background: #f6f8f7; }
+html, body, #root { margin: 0; min-height: 100%; background: #F7F5F0; }
 body { -webkit-font-smoothing: antialiased; }
 .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
 .page-narrow { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
@@ -7,9 +7,9 @@ body { -webkit-font-smoothing: antialiased; }
 .page-trustee { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
 /* UnlockGate (.page-narrow) lồng trong một trang khác (VD Diễn tập) — không cộng padding lần hai. */
 .page .page-narrow, .page-trustee .page-narrow { padding: 0; }
-.muted { color: #6b7a80; }
+.muted { color: #5E5B54; }
 .recovery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.recovery-grid > div { border: 1px dashed #c9d3cf; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Menlo, monospace; background: #fff; }
+.recovery-grid > div { border: 1px dashed #D9D2BF; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Menlo, monospace; background: #fff; }
 .secret-mask { letter-spacing: 3px; }
 @media (max-width: 640px) { .recovery-grid { grid-template-columns: repeat(2, 1fr); } }
 
@@ -18,14 +18,14 @@ body { -webkit-font-smoothing: antialiased; }
 .big-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .big-actions .ant-btn { flex: 1 1 240px; height: 64px; font-size: 18px; }
 /* Bảng nhãn/giá trị 2 cột (VD chi tiết hạng mục trong Hộp nhận) — xuống 1 cột khi màn hẹp. */
-.field-row { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; padding: 6px 0; border-bottom: 1px dashed #e3e8e6; }
+.field-row { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; padding: 6px 0; border-bottom: 1px dashed #E4DFD2; }
 .field-row:last-child { border-bottom: none; }
 .field-value { word-break: break-word; white-space: pre-wrap; }
 @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
 /* Thư mở đầu (Hộp nhận) — toàn màn hình, typography lớn, nền giấy dịu mắt. */
 .letter-screen { position: fixed; inset: 0; z-index: 1000; background: #fbfaf6; overflow-y: auto; }
 .letter-inner { max-width: 680px; margin: 0 auto; padding: 64px 24px 96px; }
-.letter-body { font-family: Georgia, "Times New Roman", serif; font-size: 22px; line-height: 1.75; white-space: pre-wrap; color: #1f2a2e; }
+.letter-body { font-family: Georgia, "Times New Roman", serif; font-size: 22px; line-height: 1.75; white-space: pre-wrap; color: #1C1C1A; }
 /* Chỉ hiện khi in (vd. giá trị bí mật không che khi in) / chỉ hiện trên màn hình. */
 .print-only { display: none; }
 
@@ -56,7 +56,7 @@ h1, h2, h3, h4, h5,
 .ant-tabs-nav { position: relative; }
 .ant-tabs-nav::after {
   content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 24px; pointer-events: none;
-  background: linear-gradient(to right, transparent, #f6f8f7);
+  background: linear-gradient(to right, transparent, #F7F5F0);
 }
 
 /* AntD Card mặc định cắt-chữ-ba-chấm phần title khi có `extra` (VD tag "Đang bật"/"Chưa bật") cùng
@@ -111,3 +111,53 @@ h1, h2, h3, h4, h5,
   text-transform: uppercase;
   color: #7A776F;
 }
+
+/* ── Khung ứng dụng: nav nhóm theo vai trò (sidebar) + thanh tab đáy (điện thoại) ─────────────── */
+.app-nav-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.app-nav-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #7A776F; padding: 14px 20px 6px; }
+.app-nav-divider { height: 1px; background: #EAE5D9; margin: 8px 16px; }
+.app-nav-item {
+  display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px 0 16px; border-left: 3px solid transparent;
+  border-radius: 0 11px 11px 0; color: #5E5B54; font-size: 14.5px; text-decoration: none; transition: background .15s;
+}
+.app-nav-item:hover { background: #F7F5F0; }
+.app-nav-item.active { padding-left: 13px; border-left-color: #1F5F5B; background: #EDF1EF; color: #164743; font-weight: 600; }
+.app-lock-btn {
+  margin-top: 12px; width: 100%; height: 38px; border: 1px solid #EAE5D9; border-radius: 11px; background: #fff; color: #5E5B54;
+  font-family: inherit; font-size: 13.5px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+}
+.app-lock-btn:disabled { cursor: default; opacity: .55; }
+
+.app-topbar {
+  display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 16px;
+  border-bottom: 1px solid #EAE5D9; background: #fff; position: sticky; top: 0; z-index: 10;
+}
+.app-topbar-lock {
+  width: 40px; height: 40px; border: 1px solid #EAE5D9; border-radius: 10px; background: #fff; color: #1C1C1A; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+}
+.app-topbar-lock:disabled { opacity: .45; }
+
+.app-content-mobile { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+.app-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr);
+  background: #fff; border-top: 1px solid #EAE5D9; padding-bottom: env(safe-area-inset-bottom);
+}
+.app-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 60px; padding: 6px 2px;
+  border: 0; background: transparent; color: #7A776F; font: inherit; font-size: 11.5px; text-decoration: none; cursor: pointer;
+}
+.app-tab .anticon { font-size: 21px; }
+.app-tab.active { color: #1F5F5B; font-weight: 600; }
+.app-tab.active::before { content: ''; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 0 0 3px 3px; background: #1F5F5B; }
+.app-tab { position: relative; }
+
+.app-more-list { display: flex; flex-direction: column; padding: 6px 8px 0; }
+.app-more-item {
+  display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 14px; border: 0; border-radius: 12px; background: transparent;
+  color: #1C1C1A; font: inherit; font-size: 16px; text-decoration: none; cursor: pointer; text-align: left;
+}
+.app-more-item:active { background: #EDF1EF; }
+.app-more-item .anticon { font-size: 18px; color: #5E5B54; }
+.app-more-item.danger, .app-more-item.danger .anticon { color: #A31E15; }
+.app-tab .ant-badge { display: flex; line-height: 1; }

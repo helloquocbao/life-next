@@ -56,9 +56,10 @@ export function HomePage() {
 
   const headline =
     state === LifecycleState.Active ? 'Bạn đang ổn.' :
-    state === LifecycleState.Missed ? 'Bạn đã quá hạn xác nhận.' :
     state === LifecycleState.Released ? 'Hồ sơ đã được bàn giao.' :
-    'Người thân đang cố liên lạc với bạn.';
+    // Missed/Grace/Verifying…: banner phía trên đã giải thích chuyện gì đang xảy ra — ở đây chỉ hỏi đúng
+    // một câu để dẫn tới MỘT nút bấm, tránh nói lại cùng một thông điệp hai lần.
+    'Bạn vẫn ổn chứ?';
 
   const next = s.readiness?.nextActionCode ? NEXT_ACTION_LINK[s.readiness.nextActionCode] : undefined;
 
