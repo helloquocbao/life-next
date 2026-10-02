@@ -42,8 +42,9 @@ services:
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
 
       App__SelfUrl: https://${API_DOMAIN:?}
-      App__CorsOrigins: ${APP_URL:?},${ADMIN_URL:?}
-      App__RedirectAllowedUrls: ${APP_URL},${ADMIN_URL}
+      # EXTRA_CORS_ORIGINS: domain phụ cùng trỏ vào owner-web/admin-console (cách nhau dấu phẩy).
+      App__CorsOrigins: ${APP_URL:?},${ADMIN_URL:?},${EXTRA_CORS_ORIGINS:-}
+      App__RedirectAllowedUrls: ${APP_URL},${ADMIN_URL},${EXTRA_CORS_ORIGINS:-}
       App__MigrateOnStartup: "true"   # chưa có DbMigrator riêng — host tự migrate + seed OIDC client
       App__Clients__AppUrl: ${APP_URL}
       App__Clients__AdminUrl: ${ADMIN_URL}

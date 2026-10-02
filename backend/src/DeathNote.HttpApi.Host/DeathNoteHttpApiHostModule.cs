@@ -112,7 +112,9 @@ public class DeathNoteHttpApiHostModule : AbpModule
         Configure<AppUrlOptions>(options =>
         {
             options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
-            options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"]?.Split(',') ?? []);
+            // Bỏ phần tử rỗng: "" khớp tiền tố với MỌI URL → thành open redirect (VD khi EXTRA_CORS_ORIGINS để trống).
+            options.RedirectAllowedUrls.AddRange(configuration["App:RedirectAllowedUrls"]?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
         });
 
         // Ngôn ngữ: tiếng Việt mặc định, tiếng Anh dự phòng.
