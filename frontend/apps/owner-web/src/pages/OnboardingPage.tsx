@@ -36,7 +36,7 @@ export function OnboardingPage() {
         <Brand />
         <Button type="link" onClick={() => auth.logout()}>Đăng xuất</Button>
       </Flex>
-      <Steps current={step} size="small" style={{ marginBottom: 24 }} items={Array.from({ length: 5 }, () => ({ title: '' }))} />
+      <Steps current={step} size="small" responsive={false} style={{ marginBottom: 24 }} items={Array.from({ length: 5 }, () => ({ title: '' }))} />
       <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: -16, marginBottom: 16 }}>
         Bước {step + 1} / 5
       </Typography.Text>
@@ -160,7 +160,7 @@ function StepScheduleIntro({ interval, grace, onChangeInterval, onChangeGrace, o
       </Typography.Paragraph>
       <Radio.Group value={interval} onChange={(e) => onChangeInterval(e.target.value)} optionType="button" buttonStyle="solid" size="large"
         style={{ width: '100%', display: 'flex' }}
-        options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày`, style: { flex: 1, textAlign: 'center' as const } }))} />
+        options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày`, style: { flex: 1, textAlign: 'center' as const, paddingInline: 2, minWidth: 0, fontSize: 15, whiteSpace: 'nowrap' as const } }))} />
       <div>
         <div style={{ marginBottom: 8 }}>Thời gian ân hạn trước khi người thân có thể yêu cầu mở: <b>{grace} ngày</b></div>
         <Slider min={7} max={30} value={grace} onChange={onChangeGrace} />

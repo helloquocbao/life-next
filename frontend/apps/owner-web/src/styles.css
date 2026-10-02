@@ -5,6 +5,8 @@ body { -webkit-font-smoothing: antialiased; }
 .page-narrow { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
 /* Các trang vai trò trustee (Hồ sơ tôi giữ giúp, Hộp nhận, lời mời…) — tập trung đọc, hẹp hơn dashboard owner. */
 .page-trustee { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+/* UnlockGate (.page-narrow) lồng trong một trang khác (VD Diễn tập) — không cộng padding lần hai. */
+.page .page-narrow, .page-trustee .page-narrow { padding: 0; }
 .muted { color: #6b7a80; }
 .recovery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .recovery-grid > div { border: 1px dashed #c9d3cf; border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Menlo, monospace; background: #fff; }
@@ -62,6 +64,43 @@ h1, h2, h3, h4, h5,
 @media (max-width: 480px) {
   .ant-card-head-wrapper { flex-wrap: wrap; row-gap: 6px; }
   .ant-card-head-title { white-space: normal !important; overflow: visible !important; text-overflow: unset !important; }
+}
+
+/*
+ * Màn hẹp: nút AntD mặc định white-space:nowrap + chiều cao cố định → nhãn dài (VD "Bỏ qua — tôi chỉ cần
+ * giữ khoá giúp người khác…") tràn ra ngoài màn hình. Cho nhãn tự xuống dòng, chiều cao co theo nội dung.
+ */
+@media (max-width: 768px) {
+  .ant-btn { white-space: normal; height: auto; min-height: var(--ant-control-height); max-width: 100%; }
+  .ant-btn-lg { min-height: var(--ant-control-height-lg); }
+  .ant-btn-sm { min-height: var(--ant-control-height-sm); }
+  .ant-btn > span { white-space: normal; overflow-wrap: anywhere; }
+}
+
+/* Drawer trên màn hẹp: cụm nút ở `extra` (Xoá/Sửa, Mã hoá & lưu) chiếm chỗ khiến tiêu đề bị ép thành cột
+   hẹp xuống 5–6 dòng. Cho tiêu đề chiếm trọn một hàng, cụm nút xuống hàng dưới, căn phải. */
+@media (max-width: 480px) {
+  .ant-drawer-header { flex-wrap: wrap !important; row-gap: 10px; }
+  .ant-drawer-header-title { flex: 1 1 100% !important; min-width: 0; }
+  .ant-drawer-extra { margin-left: auto !important; }
+}
+
+/* Descriptions có viền (Gói dịch vụ, chi tiết hạng mục): màn hẹp làm cột nhãn bị bóp còn ~50px, chữ
+   "Gói hiện tại" vỡ thành 3 dòng. Giữ cho cột nhãn tối thiểu đủ rộng. */
+@media (max-width: 480px) {
+  .ant-descriptions-bordered .ant-descriptions-item-label,
+  .ant-descriptions-bordered .ant-descriptions-item-content { padding: 10px 12px !important; }
+  .ant-descriptions-bordered .ant-descriptions-item-label { min-width: 104px; }
+  .ant-descriptions-item-content { overflow-wrap: anywhere; }
+  .ant-descriptions-item-content .ant-tag { white-space: normal; }
+}
+
+/* Alert có nút hành động (VD "Sửa ngay" ở Diễn tập): màn hẹp đẩy nút xuống dưới nội dung thay vì
+   chiếm một cột bên phải làm phần chữ bị ép còn vài từ mỗi dòng. */
+@media (max-width: 480px) {
+  .ant-alert:has(> .ant-alert-actions) { flex-wrap: wrap !important; }
+  .ant-alert:has(> .ant-alert-actions) > .ant-alert-section { flex: 1 1 0; min-width: 0; }
+  .ant-alert-actions { margin-inline-start: 0 !important; margin-top: 10px; flex-basis: 100%; }
 }
 
 /* Nhãn viết hoa nhỏ trên đầu mỗi khối thông tin — theo mẫu UI ("CHECK-IN TIẾP THEO", "MỨC ĐỘ SẴN SÀNG"). */

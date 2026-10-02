@@ -108,7 +108,7 @@ export function UnlockGate({ children, reason }: { children: ReactNode; reason?:
             </Space>
             <Input.OTP length={6} value={totpCode} onChange={setTotpCode} autoFocus onInput={() => setError(undefined)} />
             <ErrorAlert error={error} />
-            <Space>
+            <Space wrap>
               <Button type="primary" size="large" loading={busy} disabled={totpCode.length !== 6} onClick={verifyTotp}>Xác nhận</Button>
               <Button onClick={cancelTotp}>Quay lại</Button>
             </Space>
@@ -141,7 +141,7 @@ export function UnlockGate({ children, reason }: { children: ReactNode; reason?:
               <Input.Password autoFocus size="large" autoComplete="current-password" />
             </Form.Item>
             <ErrorAlert error={error} style={{ marginBottom: 16 }} />
-            <Space>
+            <Space wrap>
               <Button type="primary" htmlType="submit" size="large" loading={busy}>Mở khoá</Button>
               <Button type="link" onClick={() => setRecoverOpen(true)}>Quên passphrase?</Button>
             </Space>

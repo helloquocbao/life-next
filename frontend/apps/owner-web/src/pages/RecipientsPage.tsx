@@ -41,7 +41,7 @@ export function RecipientsPage() {
 
         {trustees.error && <ErrorAlert error={trustees.error} />}
         {!trustees.isLoading && (trustees.data?.length ?? 0) === 0 && <EmptyCard description="Chưa có người thân nào" />}
-        <List loading={trustees.isLoading} dataSource={trustees.data ?? []}
+        <List loading={trustees.isLoading} dataSource={trustees.data ?? []} locale={{ emptyText: null }}
           renderItem={(t) => (
             <List.Item style={{ padding: 0, marginBottom: 12, display: 'block' }}>
               <Card>

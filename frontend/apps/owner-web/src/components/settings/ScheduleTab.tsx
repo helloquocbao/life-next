@@ -41,7 +41,8 @@ export function ScheduleTab() {
       <Card title="Nhịp check-in">
         <Form layout="vertical" onFinish={saveSchedule} initialValues={{ checkInIntervalDays: s.checkInIntervalDays, graceDays: s.graceDays }}>
           <Form.Item name="checkInIntervalDays" label="Bao lâu xác nhận một lần">
-            <Radio.Group optionType="button" buttonStyle="solid" options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày` }))} />
+            <Radio.Group optionType="button" buttonStyle="solid" style={{ width: '100%', maxWidth: 420, display: 'flex' }}
+              options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày`, style: { flex: 1, textAlign: 'center' as const, paddingInline: 2, minWidth: 0, fontSize: 15, whiteSpace: 'nowrap' as const } }))} />
           </Form.Item>
           <Form.Item name="graceDays" label="Thời gian ân hạn sau khi báo người thân (ngày)">
             <Slider min={7} max={30} marks={{ 7: '7', 14: '14', 21: '21', 30: '30' }} />

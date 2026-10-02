@@ -78,10 +78,11 @@ function AssetMap({ items }: { items: DecryptedItem[] }) {
   });
   return (
     <Card title="Bản đồ tài sản" style={{ height: '100%' }} styles={{ body: { padding: 0 } }}>
-      <Table size="small" pagination={false} dataSource={rows} scroll={{ x: 420 }} columns={[
+      {/* Không cuộn ngang: cột hẹp + tag tự xuống dòng để vừa màn hình điện thoại (~340px). */}
+      <Table size="small" pagination={false} dataSource={rows} tableLayout="fixed" columns={[
         { title: 'Loại', dataIndex: 'label' },
-        { title: 'Số lượng', dataIndex: 'count', width: 90, align: 'center' },
-        { title: 'Người phụ trách', dataIndex: 'owners', render: (o: string[]) => o.length ? o.map((n) => <Tag key={n}>{n}</Tag>) : <span className="muted">—</span> },
+        { title: 'Số', dataIndex: 'count', width: 52, align: 'center' },
+        { title: 'Người phụ trách', dataIndex: 'owners', width: '38%', render: (o: string[]) => o.length ? o.map((n) => <Tag key={n} style={{ marginBottom: 4, whiteSpace: 'normal' }}>{n}</Tag>) : <span className="muted">—</span> },
       ]} />
     </Card>
   );

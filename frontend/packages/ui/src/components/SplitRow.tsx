@@ -18,7 +18,8 @@ export function SplitRow({ left, right, align = 'start', gap = 12, style }: {
   return (
     <Flex justify="space-between" align={align} wrap gap={gap} style={style}>
       <div style={{ flex: '1 1 280px', minWidth: 0 }}>{left}</div>
-      <Space wrap style={{ flexShrink: 0 }}>{right}</Space>
+      {/* Không ép flexShrink:0 — nếu không, cụm nút không bao giờ tự xuống dòng và tràn khỏi thẻ trên màn hẹp. */}
+      <Space wrap style={{ flex: '0 1 auto', minWidth: 0, maxWidth: '100%' }}>{right}</Space>
     </Flex>
   );
 }
