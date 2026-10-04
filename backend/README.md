@@ -31,48 +31,53 @@ Backend **không** có tầng HttpApi/Client riêng (bỏ theo hướng tối gi
 
 ## 2. Nguyên tắc thiết kế cốt lõi
 
-Toàn bộ code bám sát 6 nguyên tắc trong tài liệu gốc:
+Toàn bộ code bám sát 5 nguyên tắc:
 
-1. **Không heartbeat ≠ đã mất.** Hết heartbeat chỉ mở quy trình xác minh (`Missed → Grace`), không
-   mở dữ liệu. Xem [`Lifecycle/OwnerProfile.cs`](src/DeathNote.Domain/Owners/OwnerProfile.cs) —
-   state machine không có đường tắt tới `Released`.
+1. **Không heartbeat ≠ đã mất.** Hết heartbeat chỉ mở quy trình nhắc (`Missed → Grace`), chưa mở dữ liệu. Chỉ khi
+   **hết thời gian ân hạn mà owner vẫn không check-in** hồ sơ mới tự động bàn giao. Xem
+   [`OwnerProfile.cs`](src/DeathNote.Domain/Owners/OwnerProfile.cs) — không có đường tắt tới `Released`.
 2. **Zero-knowledge.** Server chỉ lưu ciphertext (base64). Không có API nào trả về nội dung vault ở
    dạng rõ — kể cả cho admin. Xem cột `Ciphertext`/`Wrapped*`/`Sealed*` trong
    [`DeathNoteDbContext`](src/DeathNote.EntityFrameworkCore/EntityFrameworkCore/DeathNoteDbContext.cs).
-3. **m-of-n.** Mở vault cần đủ số người giữ khoá đồng thuận, cộng bằng chứng, cộng thời gian chờ.
-   Xem [`ReleaseRequest.cs`](src/DeathNote.Domain/Releases/ReleaseRequest.cs).
-4. **Owner luôn có quyền phủ quyết.** Check-in ở bất kỳ giai đoạn nào (trừ `Released`) huỷ ngay toàn
+3. **Hai vai trò, đúng trình tự.** *Người nhắc nhở* được báo trước để nhắc owner bấm "Tôi vẫn ổn" (không nhận
+   thông tin nào); *người nhận thông tin* tự động nhận phần owner cho phép khi hết ân hạn (không được báo gì trước đó).
+   Xem [`TrusteeRole.cs`](src/DeathNote.Domain.Shared/Trustees/TrusteeRole.cs).
+4. **Owner luôn có quyền phủ quyết.** Check-in ở bất kỳ giai đoạn nào trước `Released` huỷ ngay toàn
    bộ tiến trình. Xem `LifecycleManager.CheckInAsync`.
 5. **Audit log bất biến.** Chuỗi băm SHA-256 nối tiếp + trigger PostgreSQL chặn UPDATE/DELETE. Xem
    [`AuditTrailManager.cs`](src/DeathNote.Domain/AuditTrail/AuditTrailManager.cs) và migration
    `AuditEventsAppendOnly`.
-6. **4 cổng độc lập trước khi mở:** thời gian, con người, bằng chứng, mật mã — thiếu cổng nào cũng
-   không mở. Xem `ReleaseReviewAppService.BuildDecisionSummaryAsync`.
+
+> Cơ chế m-of-n (Shamir) + thẩm định 2 phiếu của PICO đã được **thay bằng bàn giao tự động theo thời gian**
+> (migration `SimplifyRolesAndAutoRelease`). Các lớp `ReleaseRequest`/`ReleaseManager`/Admin review vẫn còn trong
+> mã nhưng không còn được kích hoạt từ ứng dụng.
 
 ## 3. Vòng đời hồ sơ (state machine)
 
 ```
-Active ──quá hạn──▶ Missed ──hết nhắc──▶ Grace ──trustee khởi tạo──▶ Verifying
-  ▲                                                                      │ đủ m-of-n
-  └──────────────── owner check-in / huỷ (mọi giai đoạn) ◀──────────────┤
-                                                                         ▼
-                    Released ◀──hết chờ cuối── FinalWait ◀──duyệt 2 phiếu── Review
+Active ──quá hạn──▶ Missed ──hết các vòng nhắc owner──▶ Grace ──hết ân hạn──▶ Released (tự động)
+  ▲                  (nhắc OWNER 4 vòng)               (báo NGƯỜI NHẮC NHỞ)    (người nhận mở hộp nhận)
+  └─────────────── owner check-in / huỷ (mọi giai đoạn trước Released) ◀────────┘
 ```
+
+| Giai đoạn | Ai được báo | Việc xảy ra |
+|---|---|---|
+| `Missed` | Chỉ owner (push → email → sms → gọi) | Tự mời người nhắc nhở chưa được mời |
+| `Grace` | **Người nhắc nhở** | "Hãy liên lạc, nhắc owner bấm Tôi vẫn ổn", kèm số ngày còn lại |
+| `Released` | **Người nhận thông tin** (chỉ ai thật sự có phần) | Server mới trao `Grant` đã niêm phong cho đúng từng người |
 
 Tham số vòng đời cấu hình tại `DeathNote:Policy` trong `appsettings.json`
 ([`LifecyclePolicyOptions`](src/DeathNote.Domain/Lifecycle/LifecyclePolicyOptions.cs)):
 
 | Tham số | Mặc định | Ý nghĩa |
 |---|---|---|
-| `MissedPhaseDays` | 7 | Thời gian leo thang nhắc (push→email→sms→call) |
-| `DefaultGraceDays` / `Min` / `Max` | 14 / 7 / 30 | Thời gian ân hạn owner chọn được |
-| `FinalWaitHours` | 72 | Thời gian chờ cuối sau khi admin duyệt |
-| `ReviewSlaDays` | 3 | SLA thẩm định (hiển thị cảnh báo quá hạn ở dashboard) |
-| `EnforceDistinctConsentIp` | true | Đồng thuận cùng IP chỉ tính 1 phiếu (chống giả danh) |
+| `MissedPhaseDays` | 7 | Thời gian leo thang nhắc **owner** (push→email→sms→call) |
+| `DefaultGraceDays` / `Min` / `Max` | 14 / 7 / 30 | Số ngày người nhắc nhở có để liên lạc trước khi tự động bàn giao (owner chọn) |
 | `TimeScale` | 1 | Hệ số nén thời gian cho **demo** — `2880` = 1 ngày ≈ 30 giây |
 
 `LifecycleWorker` ([nền, chạy mỗi `WorkerPeriodSeconds` giây](src/DeathNote.Domain/Lifecycle/LifecycleWorker.cs))
-qt hồ sơ quá hạn, gửi nhắc, chuyển `FinalWait → Released`, và tự xoá bằng chứng hết hạn lưu trữ.
+quét hồ sơ quá hạn, gửi nhắc, chuyển `Missed → Grace`, và chuyển `Grace → Released` khi hết ân hạn.
+(Các tham số `FinalWaitHours`, `ReviewSlaDays`, `EnforceDistinctConsentIp` thuộc quy trình thẩm định cũ, không còn tác dụng.)
 
 ## 4. Mật mã — những gì server KHÔNG BAO GIỜ thấy
 
@@ -80,14 +85,16 @@ Mọi mã hoá/giải mã chạy trên trình duyệt (xem `frontend/packages/cr
 lưu trữ ciphertext:
 
 - Nội dung hạng mục — kể cả **tiêu đề** và **loại** ([`VaultItem.cs`](src/DeathNote.Domain/Vaults/VaultItem.cs)).
-- Ai được phân hạng mục nào — server chỉ thấy "trustee X có N hạng mục" ([`Grant.cs`](src/DeathNote.Domain/Vaults/Grant.cs)).
+- Ai được phân hạng mục nào — server chỉ thấy "người nhận X có N hạng mục" ([`Grant.cs`](src/DeathNote.Domain/Vaults/Grant.cs)).
 - Khoá riêng của bất kỳ ai, ở bất kỳ dạng nào.
 - Nội dung thư/video để lại.
 
-Khoá phát hành được chia bằng **Shamir Secret Sharing**; mỗi mảnh được niêm phong
-(`crypto_box_seal`, X25519) cho đúng một trustee ([`KeyShare.cs`](src/DeathNote.Domain/Vaults/KeyShare.cs)).
-Việc ghép mảnh diễn ra trên thiết bị trustee — kể cả khi toàn bộ hạ tầng bị chiếm quyền, kẻ tấn công
-vẫn cần khoá riêng của đủ m trustee.
+Với **mỗi người nhận**, owner đóng gói (thư + danh sách hạng mục kèm khoá từng hạng mục) rồi **niêm phong**
+(`crypto_box_seal`, X25519) bằng khoá công khai của đúng người đó — ngay trên trình duyệt owner. Server giữ bản niêm
+phong và chỉ trao khi hồ sơ `Released`. Người nhận mở bằng khoá riêng nằm trên thiết bị của họ, bọc bằng passphrase của
+chính họ; kể cả khi toàn bộ hạ tầng bị chiếm quyền, kẻ tấn công vẫn cần khoá riêng của người nhận.
+**Hệ quả:** người nhận thông tin phải được mời sớm và tạo khoá cá nhân TRƯỚC — chưa có khoá thì phần dành cho họ
+không thể được niêm phong và họ sẽ không nhận được gì. Người nhắc nhở không cần khoá.
 
 ## 5. Tech stack
 
@@ -172,13 +179,14 @@ tài khoản mới (username = email). Grant chỉ cấp cho client `DeathNote_A
 ### Chạy test
 ```bash
 dotnet test                                      # toàn bộ (Domain + Application)
-dotnet test test/DeathNote.Domain.Tests          # unit test state machine, m-of-n, audit chain
+dotnet test test/DeathNote.Domain.Tests          # unit test state machine, bàn giao tự động, audit chain
 dotnet test test/DeathNote.Application.Tests     # integration test trọn vòng đời trên Postgres thật
 ```
-`FullLifecycleTests.Full_lifecycle_from_onboarding_to_release` mô phỏng toàn bộ hành trình: owner
-onboarding → mời 3 trustee → phân mảnh 2-of-3 → im lặng → 4 vòng nhắc → Grace → trustee khởi tạo +
-nộp bằng chứng → 2 trustee đồng thuận (chặn trùng IP) → 2 phiếu thẩm định (chặn super admin) → chờ
-cuối → phát hành → trustee mở hộp nhận đúng phần của mình → xác minh audit log toàn vẹn + bất biến.
+`FullLifecycleTests.Full_lifecycle_from_onboarding_to_automatic_release` mô phỏng toàn bộ hành trình: owner
+onboarding → thêm 2 người nhắc nhở + 1 người nhận → người nhận tạo khoá, owner niêm phong phần dành cho họ → im lặng →
+nhắc owner 4 vòng → Grace (chỉ người nhắc nhở được báo, người nhận không biết gì) → hết ân hạn → tự động bàn giao →
+người nhận mở đúng phần của mình → xác minh audit log toàn vẹn + bất biến. Kèm kịch bản owner check-in giữa ân hạn
+thì huỷ toàn bộ và không ai nhận gì.
 
 ### Reset database về trạng thái sạch
 ```bash

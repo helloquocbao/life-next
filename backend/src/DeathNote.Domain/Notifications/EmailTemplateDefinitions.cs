@@ -87,20 +87,22 @@ public static partial class EmailTemplateDefinitions
             + "<p><b>Đây là lần nhắc cuối.</b> Nếu bạn không phản hồi, hệ thống sẽ bắt đầu báo cho người thân bạn đã chọn.</p>"),
 
         new(EmailTemplateKeys.TrusteeInvitation, "Lời mời người được uỷ quyền",
-            "Gửi trustee khi chủ hồ sơ mời (hoặc hệ thống tự gửi khi chủ hồ sơ quá hạn).",
-            [TrusteeName, OwnerName, new("role", "Vai trò được giao", "người giữ mảnh khoá"), Link],
+            "Gửi khi chủ hồ sơ mời (hoặc hệ thống tự gửi cho người nhắc nhở khi chủ hồ sơ quá hạn).",
+            [TrusteeName, OwnerName, new("role", "Vai trò được giao", "người nhận thông tin"), Link],
             "{{ownerName}} đã chọn bạn làm người được uỷ quyền",
             "<p>Chào {{trusteeName}},</p><p><b>{{ownerName}}</b> tin tưởng chọn bạn là <b>{{role}}</b> trên Death Note.</p>"
-            + "<p>Điều này có nghĩa là: nếu một ngày {{ownerName}} không thể tự lo liệu, bạn sẽ là một trong những người giúp gia đình tiếp cận thông tin quan trọng (tài khoản, giấy tờ, lời nhắn). Trước khi điều đó xảy ra, bạn <b>không cần làm gì</b> và <b>không xem được</b> nội dung nào.</p>"
+            + "<p>Trước khi có chuyện gì xảy ra, bạn <b>không cần làm gì thêm</b> ngoài việc nhận lời mời này và <b>không xem được</b> nội dung nào của {{ownerName}}. "
+            + "Nếu một ngày {{ownerName}} không còn xác nhận được là vẫn ổn, hệ thống sẽ báo cho bạn đúng việc cần làm.</p>"
             + Button("Xem lời mời")),
 
-        new(EmailTemplateKeys.TrusteeGraceAlert, "Báo người thân — chủ hồ sơ im lặng",
-            "Gửi trustee khi chủ hồ sơ vào giai đoạn ân hạn (không phản hồi các lần nhắc).",
-            [TrusteeName, OwnerName, new("silentDays", "Số ngày chưa check-in", "21"), Link],
-            "{{ownerName}} chưa check-in {{silentDays}} ngày — bạn có liên lạc được không?",
-            "<p>Chào {{trusteeName}},</p><p>{{ownerName}} đã không xác nhận an toàn trong <b>{{silentDays}} ngày</b> và không phản hồi các lần nhắc.</p>"
-            + "<p>Việc này <b>chưa có nghĩa là có chuyện xấu</b>. Bạn hãy thử liên lạc với {{ownerName}} và cho chúng tôi biết kết quả.</p>"
-            + Button("Trả lời")),
+        new(EmailTemplateKeys.TrusteeGraceAlert, "Báo người nhắc nhở — chủ hồ sơ im lặng",
+            "Gửi người nhắc nhở khi chủ hồ sơ không phản hồi các lần nhắc (bắt đầu thời gian ân hạn).",
+            [TrusteeName, OwnerName, new("silentDays", "Số ngày chưa check-in", "21"), new("graceDays", "Số ngày còn lại trước khi thông tin được gửi đi", "14"), Link],
+            "{{ownerName}} chưa check-in {{silentDays}} ngày — nhờ bạn liên lạc giúp",
+            "<p>Chào {{trusteeName}},</p><p>{{ownerName}} đã không xác nhận an toàn trong <b>{{silentDays}} ngày</b> và không phản hồi các lần nhắc của hệ thống.</p>"
+            + "<p>Việc này <b>chưa có nghĩa là có chuyện xấu</b>. Nhờ bạn thử liên lạc và nhắc {{ownerName}} mở ứng dụng bấm <b>\"Tôi vẫn ổn\"</b>.</p>"
+            + "<p>Nếu trong <b>{{graceDays}} ngày</b> tới {{ownerName}} vẫn không xác nhận, hệ thống sẽ tự động gửi thông tin {{ownerName}} đã chuẩn bị cho những người nhận.</p>"
+            + Button("Mở Death Note")),
 
         new(EmailTemplateKeys.OwnerReleaseInitiated, "Cảnh báo chủ hồ sơ — có yêu cầu mở",
             "Gửi chủ hồ sơ khi một trustee khởi tạo yêu cầu mở hồ sơ.",

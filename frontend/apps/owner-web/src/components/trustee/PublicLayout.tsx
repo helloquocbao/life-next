@@ -27,7 +27,7 @@ export function PublicLayout({ children }: { children?: ReactNode }) {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Layout.Header style={{ background: '#fff', borderBottom: '1px solid #e3e8e6', padding: '0 16px', height: 64 }}>
+      <Layout.Header style={{ background: '#fff', borderBottom: '1px solid #EAE5D9', padding: '0 16px', height: 64 }}>
         <Flex align="center" justify="space-between" style={{ maxWidth: 720, margin: '0 auto', height: '100%' }}>
           <Link to="/"><Brand subtitle="Người được uỷ quyền" /></Link>
           {user && (

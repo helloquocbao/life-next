@@ -33,6 +33,8 @@ public static class AuditActions
 
     public const string StateChanged = "lifecycle.state_changed";
     public const string ReminderSent = "lifecycle.reminder_sent";
+    public const string RemindersNotified = "lifecycle.reminders_notified";
+    public const string AutoReleased = "lifecycle.auto_released";
 
     public const string ReleaseInitiated = "release.initiated";
     public const string ReleaseConsented = "release.consented";

@@ -34,9 +34,8 @@ public class TrusteeInvitationSender : DomainService
 
         var roleName = trustee.Role switch
         {
-            TrusteeRole.KeyHolder => "người giữ mảnh khoá",
-            TrusteeRole.Verifier => "người xác nhận",
-            _ => "người nhận nội dung"
+            TrusteeRole.Reminder => "người nhắc nhở",
+            _ => "người nhận thông tin"
         };
         var link = $"{_urls.AppUrl}/invite?token={Uri.EscapeDataString(token)}";
         var (subject, body) = await _templates.TrusteeInvitationAsync(trustee.DisplayName, owner.DisplayName, roleName, link);

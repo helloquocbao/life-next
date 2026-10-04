@@ -53,8 +53,8 @@ export function getHomeTourSteps(): DriveStep[] {
     {
       element: '[data-tour="nav-recipients"]',
       popover: {
-        title: 'Người nhận',
-        description: 'Chọn người thân sẽ nhận thông tin, và họ nhận đúng phần nào — bạn quyết định hoàn toàn.',
+        title: 'Người thân',
+        description: 'Chọn người nhắc nhở (được báo trước để nhắc bạn bấm nút) và người nhận thông tin (tự động nhận đúng phần bạn cho phép nếu bạn vẫn không bấm).',
       },
     },
     {

@@ -2,7 +2,7 @@
  * HOME — màn hình trạng thái, trả lời MỘT câu hỏi: "Bạn đang ổn. Lần check-in tiếp theo: 12 ngày nữa."
  *
  * Thiết kế cho người KHÔNG rành công nghệ: chỉ MỘT khối chính đập vào mắt (trạng thái + nút bấm).
- * Số liệu, phần trăm, thuật ngữ kỹ thuật (ngưỡng, phân mảnh khoá…) được gấp lại phía dưới —
+ * Số liệu, phần trăm và các chi tiết kỹ thuật được gấp lại phía dưới —
  * ai cần xem thì bấm "Xem thêm", còn lại không phải nhìn thấy ngay.
  *
  * Khi hồ sơ đã vào giai đoạn cảnh báo, Home đổi hẳn: banner đỏ + nút huỷ ngay.
@@ -11,10 +11,9 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Alert, Button, Card, Col, Flex, Progress, Row, Space, Statistic, Typography } from 'antd';
 import { ArrowRightOutlined, BarChartOutlined, DownOutlined, ExperimentOutlined } from '@ant-design/icons';
-import { LifecycleState, ReleaseStatus, type OwnerStatusDto } from '@deathnote/api';
+import { LifecycleState, type OwnerStatusDto } from '@deathnote/api';
 import {
   ErrorAlert, FullPageSpin, SplitRow, businessRemaining, colors, formatDateTime, formatRelative, parseUtc,
-  releaseReasonLabel, releaseStatusLabel,
 } from '@deathnote/ui';
 import { CheckInButton } from '../components/CheckInButton';
 import { StatusRing } from '../components/StatusRing';
@@ -28,9 +27,9 @@ const NEXT_ACTION_LINK: Record<string, { to: string; cta: string; plain: string 
   recovery_kit: { to: '/settings?tab=security', cta: 'Xác nhận', plain: 'Xác nhận bạn đã cất bản dự phòng an toàn' },
   first_item: { to: '/vault', cta: 'Thêm ngay', plain: 'Cất thông tin đầu tiên của bạn' },
   five_items: { to: '/assets', cta: 'Trả lời vài câu hỏi', plain: 'Cho chúng tôi biết thêm về tài sản của bạn' },
-  trustee: { to: '/recipients', cta: 'Mời người thân', plain: 'Chọn người thân sẽ nhận thông tin' },
-  two_keyholders: { to: '/recipients', cta: 'Thêm người', plain: 'Thêm một người thân nữa cho chắc chắn' },
-  keys: { to: '/recipients', cta: 'Hoàn tất', plain: 'Xác nhận ai sẽ nhận thông tin gì' },
+  reminder: { to: '/recipients', cta: 'Thêm người', plain: 'Chọn người sẽ nhắc bạn bấm "Tôi vẫn ổn"' },
+  recipient: { to: '/recipients', cta: 'Mời họ', plain: 'Mời người sẽ nhận thông tin của bạn' },
+  keys: { to: '/recipients', cta: 'Chọn thông tin', plain: 'Chọn thông tin cho từng người nhận' },
   two_factor: { to: '/settings?tab=security', cta: 'Bật ngay', plain: 'Thêm một lớp bảo vệ khi xác nhận' },
 };
 
@@ -182,36 +181,21 @@ function AlertBanner({ s, offset, scale }: { s: OwnerStatusDto; offset: number; 
     return (
       <Alert type="warning" showIcon
         title="Bạn đã bỏ lỡ lần xác nhận gần đây."
-        description={notify ? `Nếu bạn không phản hồi, người thân của bạn sẽ được báo sau khoảng ${notify.text}. Chỉ cần bấm "Tôi vẫn ổn" bên dưới là xong.` : undefined} />
+        description={notify ? `Nếu bạn không phản hồi, người nhắc nhở của bạn sẽ được báo sau khoảng ${notify.text}. Chỉ cần bấm "Tôi vẫn ổn" bên dưới là xong.` : undefined} />
     );
   }
   if (state === LifecycleState.Grace) {
     const end = businessRemaining(s.graceEndsAt, offset, scale);
     return (
       <Alert type="error" showIcon
-        title="Chúng tôi đang báo cho người thân của bạn."
+        title="Chúng tôi đã báo người nhắc nhở của bạn."
         description={end && !end.overdue
-          ? `Còn khoảng ${end.text} trước khi họ có thể xin mở thông tin. Nếu bạn vẫn ổn, hãy bấm nút đỏ bên dưới ngay.`
-          : 'Người thân đã có thể xin mở thông tin. Nếu bạn vẫn ổn, hãy bấm nút đỏ bên dưới ngay.'} />
-    );
-  }
-  if (s.openRelease && state >= LifecycleState.Verifying && state < LifecycleState.Released) {
-    const r = s.openRelease;
-    const until = r.status === ReleaseStatus.FinalWait ? businessRemaining(r.finalWaitUntil, offset, scale) : null;
-    return (
-      <Alert type="error" showIcon
-        title={`${r.initiatorName} đang xin mở thông tin của bạn (lý do: ${releaseReasonLabel[r.reason ?? 0]}).`}
-        description={
-          <>
-            Đang ở bước: <b>{releaseStatusLabel[r.status ?? 0]}</b>
-            {until && <> · Nếu không có gì thay đổi, thông tin sẽ được gửi cho họ sau <b>{until.text}</b></>}
-            <br />Chỉ cần bấm nút đỏ bên dưới là mọi thứ dừng lại ngay lập tức.
-          </>
-        } />
+          ? `Còn khoảng ${end.text} trước khi thông tin tự động được gửi cho người nhận. Nếu bạn vẫn ổn, hãy bấm nút đỏ bên dưới ngay.`
+          : 'Nếu bạn vẫn ổn, hãy bấm nút đỏ bên dưới ngay — nếu không, thông tin sẽ tự động được gửi cho người nhận.'} />
     );
   }
   if (state === LifecycleState.Released) {
-    return <Alert type="info" showIcon title={`Thông tin đã được gửi cho người thân bạn lúc ${formatDateTime(s.stateChangedAt)}.`} />;
+    return <Alert type="info" showIcon title={`Hết thời gian chờ, thông tin đã được tự động gửi cho người nhận lúc ${formatDateTime(s.stateChangedAt)}.`} />;
   }
   void parseUtc;
   return null;

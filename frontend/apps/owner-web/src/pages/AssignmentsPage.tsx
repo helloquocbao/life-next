@@ -5,6 +5,7 @@
 import { Button, Card, Empty, Typography } from 'antd';
 import { KeyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
+import { TrusteeRole } from '@deathnote/api';
 import { ErrorAlert, FullPageSpin } from '@deathnote/ui';
 import { AssignmentCard } from '../components/trustee/assignment/AssignmentCard';
 import { useAssignments, useKeyring } from '../lib/trusteePortalHooks';
@@ -19,7 +20,8 @@ export function AssignmentsPage() {
     return <div className="page-trustee"><ErrorAlert error={assignments.error ?? keyring.error} /></div>;
 
   const list = assignments.data ?? [];
-  const needsKeyring = list.length > 0 && !keyring.data?.exists;
+  // Chỉ người nhận thông tin mới cần khoá cá nhân (phần dành cho họ được niêm phong bằng khoá đó).
+  const needsKeyring = list.some((a) => a.role === TrusteeRole.Recipient) && !keyring.data?.exists;
 
   if (list.length === 0)
     return (
@@ -40,12 +42,12 @@ export function AssignmentsPage() {
         <Card style={{ marginBottom: 24, borderColor: '#c98a16' }}>
           <p className="lead"><KeyOutlined style={{ marginRight: 10 }} />Việc cần làm: tạo khoá cá nhân</p>
           <Typography.Paragraph style={{ marginTop: 12 }}>
-            Người uỷ quyền cần khoá công khai của bạn để giao mảnh khoá và phần nội dung dành cho bạn. Chỉ mất một phút.
+            Người đã chọn bạn cần khoá công khai của bạn để niêm phong phần dành riêng cho bạn — thiếu bước này, bạn không nhận được gì. Chỉ mất một phút.
           </Typography.Paragraph>
           <Button type="primary" size="large" block onClick={() => navigate('/keyring')}>Tạo khoá cá nhân</Button>
         </Card>
       )}
-      {list.map((a) => <AssignmentCard key={a.trusteeId} a={a} keyring={keyring.data} />)}
+      {list.map((a) => <AssignmentCard key={a.trusteeId} a={a} />)}
     </div>
   );
 }

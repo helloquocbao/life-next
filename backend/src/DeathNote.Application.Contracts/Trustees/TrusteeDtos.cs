@@ -12,14 +12,14 @@ public class TrusteeDto
     public string? Relationship { get; set; }
     public TrusteeRole Role { get; set; }
     public TrusteeStatus Status { get; set; }
-    /// <summary>Khoá công khai X25519 (base64) — owner dùng để niêm phong mảnh khoá/grant.</summary>
+    /// <summary>Khoá công khai X25519 (base64) — owner dùng để niêm phong phần dành cho người này (Grant).</summary>
     public string? PublicKey { get; set; }
     public DateTime InvitedAt { get; set; }
     public DateTime? AcceptedAt { get; set; }
     public ContactResponse? LastContactResponse { get; set; }
     public DateTime? LastContactResponseAt { get; set; }
-    /// <summary>Đang giữ mảnh khoá của phiên bản hiện hành.</summary>
-    public bool HasCurrentKeyShare { get; set; }
+    /// <summary>Owner đã phân bổ + niêm phong phần dành cho người này ở phiên bản hiện hành.</summary>
+    public bool HasCurrentGrant { get; set; }
     public int GrantItemCount { get; set; }
     public DateTime CreationTime { get; set; }
 }

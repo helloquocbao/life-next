@@ -14,10 +14,7 @@ public class VaultDto
     public string? PassphraseWrappedKey { get; set; }
     public string? RecoveryWrappedKey { get; set; }
     public string? RecoverySalt { get; set; }
-    public string? WrappedReleaseKey { get; set; }
     public string? EncryptedAllocation { get; set; }
-    public int? Threshold { get; set; }
-    public int? KeyHolderCount { get; set; }
     public int KeyVersion { get; set; }
     public DateTime? KeysDistributedAt { get; set; }
     public bool KeysOutdated { get; set; }
@@ -61,22 +58,14 @@ public class SaveVaultItemInput
 }
 
 /// <summary>
-/// Phân mảnh khoá + phân bổ hạng mục cho người nhận. Toàn bộ mật mã đã thực hiện trên trình duyệt owner:
-/// server chỉ nhận các mảnh đã niêm phong và grant đã khoá hai lớp.
+/// "Ai nhận gì": ma trận phân bổ (mã hoá bằng VaultKey, để owner chỉnh lại về sau) + một Grant cho mỗi người nhận.
+/// Mỗi Grant đã được NIÊM PHONG bằng khoá công khai của đúng người nhận ngay trên trình duyệt owner — server không
+/// đọc được và chỉ trao khi hồ sơ được bàn giao.
 /// </summary>
 public class DistributeKeysInput
 {
-    [Range(1, 20)] public int Threshold { get; set; }
-    [Required, StringLength(512)] public string WrappedReleaseKey { get; set; } = default!;
     public string? EncryptedAllocation { get; set; }
-    public List<SealedShareInput> Shares { get; set; } = new();
     public List<SealedGrantInput> Grants { get; set; } = new();
-}
-
-public class SealedShareInput
-{
-    public Guid TrusteeId { get; set; }
-    [Required, StringLength(1024)] public string SealedShare { get; set; } = default!;
 }
 
 public class SealedGrantInput

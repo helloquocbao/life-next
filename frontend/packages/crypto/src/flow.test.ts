@@ -1,6 +1,6 @@
 /**
  * Kiểm thử đầu-cuối toàn bộ luồng mật mã (không cần server):
- * owner tạo két → thêm hạng mục → phân mảnh 2-of-3 → 2 trustee đồng thuận → trustee thứ 3 mở hộp nhận.
+ * owner tạo két → thêm hạng mục → niêm phong phần dành cho từng người nhận → người nhận mở đúng phần của mình.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -11,8 +11,7 @@ import {
   decryptItemWithKey,
   encryptItem,
   isValidRecoveryPhrase,
-  openInbox,
-  prepareConsentDeliveries,
+  openGrant,
   recoverVault,
   unlockKeyring,
   unlockVault,
@@ -42,58 +41,57 @@ describe('luồng zero-knowledge đầu-cuối', () => {
     expect(recovered).toEqual(vaultKey);
   });
 
-  it('2-of-3: chỉ trustee được phân mới đọc được đúng hạng mục của mình', async () => {
+  it('mỗi người nhận chỉ mở được đúng phần được niêm phong cho mình', async () => {
     const { vaultKey } = await createVault('pw', FAST);
     const a = await encryptItem(vaultKey, item('Vietcombank'));
     const b = await encryptItem(vaultKey, item('Techcombank'));
     expect((await decryptItem(vaultKey, a)).data.title).toBe('Vietcombank');
 
-    const [t1, t2, t3] = await Promise.all(['p1', 'p2', 'p3'].map((p) => createKeyring(p, FAST)));
-    const ids = ['t1', 't2', 't3'];
+    const [t1, t3] = await Promise.all(['p1', 'p3'].map((p) => createKeyring(p, FAST)));
     const dist = await buildDistribution({
       vaultKey,
       ownerName: 'An',
-      threshold: 2,
-      recipients: [t1, t2, t3].map((t, i) => ({ id: ids[i], publicKey: t.payload.publicKey, isKeyHolder: true })),
+      recipients: [
+        { id: 't1', publicKey: t1.payload.publicKey },
+        { id: 't3', publicKey: t3.payload.publicKey },
+      ],
       items: [
         { id: 'A', itemKey: a.itemKey, title: 'Vietcombank', kind: 'bank' },
         { id: 'B', itemKey: b.itemKey, title: 'Techcombank', kind: 'bank' },
       ],
       allocation: { v: 1, assignments: { t3: ['A'], t1: ['B'] }, letters: { t3: 'Gửi con' } },
     });
-    expect(dist.shares).toHaveLength(3);
     expect(dist.grants.map((g) => g.trusteeId).sort()).toEqual(['t1', 't3']);
+    const grantOf = (id: string) => dist.grants.find((g) => g.trusteeId === id)!.sealedPayload;
 
-    // t1 và t2 đồng thuận: mở mảnh của mình, niêm phong lại cho các trustee khác
-    const keys = await Promise.all([t1, t2, t3].map((t, i) => unlockKeyring(t.payload, `p${i + 1}`)));
-    const share = (id: string) => dist.shares.find((s) => s.trusteeId === id)!.sealedShare;
-    const d1 = await prepareConsentDeliveries(share('t1'), keys[0], [{ trusteeId: 't3', publicKey: t3.payload.publicKey }]);
-    const d2 = await prepareConsentDeliveries(share('t2'), keys[1], [{ trusteeId: 't3', publicKey: t3.payload.publicKey }]);
+    // Server không đọc được: payload là ciphertext, không chứa chữ rõ.
+    expect(grantOf('t3')).not.toContain('Gửi con');
+    expect(atob(grantOf('t3'))).not.toContain('Vietcombank');
 
-    // t3 mở hộp nhận với 2 mảnh được chuyển (không cần mảnh của chính mình)
-    const grant = await openInbox({
-      keys: keys[2],
-      sealedShares: [d1[0].sealedShare, d2[0].sealedShare],
-      threshold: 2,
-      sealedGrant: dist.grants.find((g) => g.trusteeId === 't3')!.sealedPayload,
-    });
+    // t3 mở phần của mình bằng khoá riêng (mở khoá bằng passphrase trên thiết bị của họ).
+    const keys3 = await unlockKeyring(t3.payload, 'p3');
+    const grant = await openGrant({ keys: keys3, sealedGrant: grantOf('t3') });
     expect(grant!.letter).toBe('Gửi con');
     expect(grant!.items.map((i) => i.id)).toEqual(['A']);
     expect((await decryptItemWithKey(a.ciphertext, grant!.items[0].key)).title).toBe('Vietcombank');
 
-    // Chỉ 1 mảnh thì không mở được
-    await expect(
-      openInbox({ keys: keys[2], sealedShares: [d1[0].sealedShare], threshold: 2, sealedGrant: dist.grants[0].sealedPayload }),
-    ).rejects.toThrow();
+    // Sai passphrase thì không mở được khoá riêng.
+    await expect(unlockKeyring(t3.payload, 'sai')).rejects.toThrow();
 
-    // t3 không mở được grant của t1 dù có đủ mảnh
-    await expect(
-      openInbox({
-        keys: keys[2],
-        sealedShares: [d1[0].sealedShare, d2[0].sealedShare],
-        threshold: 2,
-        sealedGrant: dist.grants.find((g) => g.trusteeId === 't1')!.sealedPayload,
-      }),
-    ).rejects.toThrow();
+    // t3 không mở được phần của t1.
+    await expect(openGrant({ keys: keys3, sealedGrant: grantOf('t1') })).rejects.toThrow();
+
+    // Không có phần nào được phân → null.
+    expect(await openGrant({ keys: keys3, sealedGrant: null })).toBeNull();
+  });
+
+  it('bỏ qua người nhận không được phân gì và không có thư', async () => {
+    const { vaultKey } = await createVault('pw', FAST);
+    const t = await createKeyring('p', FAST);
+    const dist = await buildDistribution({
+      vaultKey, ownerName: 'An', recipients: [{ id: 't', publicKey: t.payload.publicKey }], items: [],
+      allocation: { v: 1, assignments: {}, letters: {} },
+    });
+    expect(dist.grants).toHaveLength(0);
   });
 });

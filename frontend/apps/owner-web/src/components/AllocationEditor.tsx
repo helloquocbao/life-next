@@ -33,7 +33,8 @@ export function AllocationEditor({ trustee, items, selectedIds, letter, onToggle
           ) : (
             <List bordered dataSource={sorted} renderItem={(it) => (
               <List.Item style={{ cursor: 'pointer' }} onClick={() => onToggle(it.id, !selected.has(it.id))}>
-                <Checkbox checked={selected.has(it.id)} onChange={(e) => onToggle(it.id, e.target.checked)} style={{ width: '100%' }}>
+                {/* stopPropagation: nếu không, bấm vào chính ô tích/nhãn sẽ bật rồi lại tắt (click nổi bọt lên List.Item lần 2). */}
+                <Checkbox checked={selected.has(it.id)} onChange={(e) => onToggle(it.id, e.target.checked)} onClick={(e) => e.stopPropagation()} style={{ width: '100%' }}>
                   <span style={{ fontSize: 16 }}>{kindDef(it.data.kind).emoji} {it.data.title}</span>
                 </Checkbox>
               </List.Item>

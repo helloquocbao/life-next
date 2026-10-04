@@ -29,8 +29,9 @@ public class NotificationTemplates : ITransientDependency
     public Task<(string Subject, string Body)> TrusteeInvitationAsync(string trusteeName, string ownerName, string role, string link) =>
         R(EmailTemplateKeys.TrusteeInvitation, ("trusteeName", trusteeName), ("ownerName", ownerName), ("role", role), ("link", link));
 
-    public Task<(string Subject, string Body)> TrusteeGraceAlertAsync(string trusteeName, string ownerName, int silentDays, string link) =>
-        R(EmailTemplateKeys.TrusteeGraceAlert, ("trusteeName", trusteeName), ("ownerName", ownerName), ("silentDays", silentDays.ToString()), ("link", link));
+    public Task<(string Subject, string Body)> TrusteeGraceAlertAsync(string trusteeName, string ownerName, int silentDays, int graceDays, string link) =>
+        R(EmailTemplateKeys.TrusteeGraceAlert, ("trusteeName", trusteeName), ("ownerName", ownerName), ("silentDays", silentDays.ToString()),
+            ("graceDays", graceDays.ToString()), ("link", link));
 
     public Task<(string Subject, string Body)> OwnerReleaseInitiatedAsync(string ownerName, string link) =>
         R(EmailTemplateKeys.OwnerReleaseInitiated, ("ownerName", ownerName), ("link", link));

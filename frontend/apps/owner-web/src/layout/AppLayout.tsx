@@ -34,7 +34,7 @@ const OWNER_ITEMS: NavItem[] = [
   { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
   { key: '/vault', label: 'Két thông tin', short: 'Két', icon: <LockOutlined />, tour: 'nav-vault' },
   { key: '/assets', label: 'Tài sản & quyền lợi', short: 'Tài sản', icon: <SafetyCertificateOutlined />, tour: 'nav-assets' },
-  { key: '/recipients', label: 'Người nhận', icon: <TeamOutlined />, tour: 'nav-recipients' },
+  { key: '/recipients', label: 'Người thân', icon: <TeamOutlined />, tour: 'nav-recipients' },
 ];
 
 const isActive = (pathname: string, key: string) => (key === '/' ? pathname === '/' : pathname.startsWith(key));

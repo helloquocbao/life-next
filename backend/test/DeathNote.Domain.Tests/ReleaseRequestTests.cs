@@ -93,23 +93,23 @@ public class ReleaseRequestTests
         r.Status.ShouldBe(ReleaseStatus.AwaitingSecondReview);
     }
 
-    [Theory]
-    [InlineData(1, 3)]
-    [InlineData(4, 3)]
-    [InlineData(0, 1)]
-    public void Vault_rejects_unsafe_thresholds(int m, int n)
-    {
-        var v = new Vault(Guid.NewGuid(), "salt", 3, 1 << 26, "wrapped", "recovery", "rsalt");
-        Should.Throw<BusinessException>(() => v.RegisterKeyDistribution(m, n, "wrk", null, T0)).Code.ShouldBe(DeathNoteErrorCodes.InvalidThreshold);
-    }
-
     [Fact]
-    public void Vault_accepts_2_of_3()
+    public void Vault_key_distribution_bumps_version_and_clears_outdated_flag()
     {
         var v = new Vault(Guid.NewGuid(), "salt", 3, 1 << 26, "wrapped", "recovery", "rsalt");
-        v.RegisterKeyDistribution(2, 3, "wrk", null, T0);
+        v.HasKeyDistribution.ShouldBeFalse();
+        v.MarkKeysOutdated();
+        v.KeysOutdated.ShouldBeFalse(); // chưa từng phân bổ nên chưa có gì "lỗi thời"
+
+        v.RegisterKeyDistribution("enc-allocation", T0);
         v.KeyVersion.ShouldBe(1);
         v.HasKeyDistribution.ShouldBeTrue();
+
+        v.MarkKeysOutdated();
+        v.KeysOutdated.ShouldBeTrue();
+        v.RegisterKeyDistribution("enc-allocation-2", T0.AddDays(1));
+        v.KeyVersion.ShouldBe(2);
+        v.KeysOutdated.ShouldBeFalse();
     }
 
     private static ReleaseRequest ReadyForReview()

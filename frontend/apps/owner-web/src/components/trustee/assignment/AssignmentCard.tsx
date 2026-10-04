@@ -1,22 +1,21 @@
 /**
- * Một hồ sơ mà người dùng là người được uỷ quyền. Nội dung đổi theo `phase` — mỗi giai đoạn chỉ
- * một việc cần làm: Bình thường → Cảnh báo → Đang xác minh → Đã mở.
+ * Một hồ sơ mà người dùng được owner giao vai trò. Nội dung đổi theo VAI TRÒ và GIAI ĐOẠN — mỗi lúc chỉ một việc:
+ *
+ *   Người nhắc nhở:       Bình thường → (owner im lặng) Cảnh báo: liên lạc & nhắc owner bấm nút → Đã bàn giao.
+ *   Người nhận thông tin: Bình thường (không được báo gì) → (hết ân hạn) Đã bàn giao: mở hộp nhận.
  */
 import { useState } from 'react';
 import { Button, Card, Typography } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
-import { TrusteePhase, type AssignmentDto, type KeyringDto } from '@deathnote/api';
+import { TrusteePhase, TrusteeRole, type AssignmentDto } from '@deathnote/api';
 import { roleLabel } from '../../../lib/trusteeLabels';
 import { ActivityDrawer } from '../ActivityDrawer';
 import { AlertPhase } from './AlertPhase';
-import { InitiateReleaseModal } from './InitiateReleaseModal';
 import { NormalPhase } from './NormalPhase';
 import { ReleasedPhase } from './ReleasedPhase';
-import { VerifyingPhase } from './VerifyingPhase';
 
-export function AssignmentCard({ a, keyring }: { a: AssignmentDto; keyring: KeyringDto | undefined }) {
+export function AssignmentCard({ a }: { a: AssignmentDto }) {
   const [activityOpen, setActivityOpen] = useState(false);
-  const [initiateOpen, setInitiateOpen] = useState(false);
   const trusteeId = a.trusteeId ?? '';
 
   return (
@@ -32,18 +31,13 @@ export function AssignmentCard({ a, keyring }: { a: AssignmentDto; keyring: Keyr
       }
     >
       {a.phase === TrusteePhase.Normal && <NormalPhase a={a} />}
-      {a.phase === TrusteePhase.Alert && <AlertPhase a={a} onInitiate={() => setInitiateOpen(true)} />}
-      {a.phase === TrusteePhase.Verifying && <VerifyingPhase a={a} keyring={keyring} />}
+      {a.phase === TrusteePhase.Alert && a.role === TrusteeRole.Reminder && <AlertPhase a={a} />}
       {a.phase === TrusteePhase.Released && <ReleasedPhase a={a} />}
 
       <Button type="link" icon={<HistoryOutlined />} style={{ paddingLeft: 0, marginTop: 16 }} onClick={() => setActivityOpen(true)}>
         Nhật ký liên quan đến tôi
       </Button>
-
       {trusteeId && <ActivityDrawer trusteeId={trusteeId} open={activityOpen} onClose={() => setActivityOpen(false)} />}
-      {trusteeId && (
-        <InitiateReleaseModal trusteeId={trusteeId} ownerName={a.ownerName ?? ''} open={initiateOpen} onClose={() => setInitiateOpen(false)} />
-      )}
     </Card>
   );
 }

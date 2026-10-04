@@ -58,7 +58,7 @@ export function DangerZoneCard({ twoFactorEnabled }: { twoFactorEnabled: boolean
   return (
     <Card title={<Space><ExclamationCircleOutlined style={{ color: colors.red }} /><span>Vùng nguy hiểm</span></Space>} style={{ borderColor: colors.red }}>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-        Xoá vĩnh viễn toàn bộ két hiện tại (hạng mục, mảnh khoá đã phát cho người thân) và bắt đầu lại
+        Xoá vĩnh viễn toàn bộ két hiện tại (hạng mục và phần đã chuẩn bị cho người nhận) và bắt đầu lại
         từ đầu với két mới. Không thể hoàn tác.
       </Typography.Paragraph>
       <Button danger onClick={() => setOpen(true)}>Xoá két này</Button>

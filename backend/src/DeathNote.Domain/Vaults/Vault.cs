@@ -10,13 +10,14 @@ namespace DeathNote.Vaults;
 ///  passphrase ──Argon2id(salt)──▶ KEK₁ ─┐
 ///  12 từ khôi phục ──Argon2id──▶ KEK₂ ─┼──bọc──▶ VaultKey (32 byte, ngẫu nhiên)
 ///                                       │            │
-///                                       │            ├──bọc──▶ ItemKey của từng hạng mục
-///                                       │            └──bọc──▶ ReleaseKey
-///                                       │
-///  ReleaseKey ──Shamir(m, n)──▶ n mảnh ──mỗi mảnh niêm phong bằng khoá công khai của 1 trustee──▶ KeyShare
+///                                       │            └──bọc──▶ ItemKey của từng hạng mục
+///
+///  Với MỖI người nhận: (thư + danh sách ItemKey được phân) ──niêm phong bằng khoá công khai X25519
+///  của đúng người đó──▶ Grant
 /// </code>
-/// Server chỉ giữ ciphertext. Nếu toàn bộ hạ tầng bị chiếm quyền, kẻ tấn công vẫn cần khoá riêng
-/// của đủ m trustee mới đọc được dữ liệu.
+/// Server chỉ giữ ciphertext và chỉ trao Grant cho người nhận SAU KHI hồ sơ ở trạng thái Released (hết ân hạn
+/// mà owner không check-in). Ngay cả khi đó server cũng không đọc được gì: Grant chỉ mở được bằng khoá riêng
+/// nằm trên thiết bị người nhận, được bọc bằng passphrase của chính họ.
 /// </summary>
 public class Vault : FullAuditedAggregateRoot<Guid>
 {
@@ -34,7 +35,7 @@ public class Vault : FullAuditedAggregateRoot<Guid>
     public string RecoveryWrappedKey { get; private set; } = default!;
     public string RecoverySalt { get; private set; } = default!;
 
-    /// <summary>ReleaseKey được bọc bằng VaultKey (owner cần để phân bổ lại grant khi thay đổi người nhận).</summary>
+    /// <summary>[Cũ — cơ chế m-of-n đã bỏ] Không còn được ghi; giữ cột để không phải đổi cấu trúc CSDL.</summary>
     public string? WrappedReleaseKey { get; private set; }
 
     /// <summary>
@@ -43,12 +44,10 @@ public class Vault : FullAuditedAggregateRoot<Guid>
     /// </summary>
     public string? EncryptedAllocation { get; private set; }
 
-    // --- Cấu hình m-of-n hiện hành ---
-    /// <summary>m: số người giữ khoá tối thiểu phải đồng thuận.</summary>
+    // --- [Cũ — m-of-n đã bỏ] Giữ cột để không phải đổi cấu trúc CSDL; không còn được ghi ---
     public int? Threshold { get; private set; }
-    /// <summary>n: tổng số người giữ mảnh khoá.</summary>
     public int? KeyHolderCount { get; private set; }
-    /// <summary>Tăng mỗi lần owner phân mảnh lại khoá; mảnh khoá cũ bị vô hiệu.</summary>
+    /// <summary>Tăng mỗi lần owner phân bổ lại cho người nhận; Grant cũ bị vô hiệu.</summary>
     public int KeyVersion { get; private set; }
     public DateTime? KeysDistributedAt { get; private set; }
     /// <summary>
@@ -81,21 +80,9 @@ public class Vault : FullAuditedAggregateRoot<Guid>
         PassphraseWrappedKey = passphraseWrappedKey;
     }
 
-    /// <summary>
-    /// Ghi nhận một lần phân mảnh khoá mới. Kiểm tra ngưỡng m-of-n hợp lệ:
-    /// n ≥ 2 thì m phải ≥ 2 — không ai được phép một mình mở vault.
-    /// </summary>
-    public void RegisterKeyDistribution(int threshold, int keyHolderCount, string wrappedReleaseKey, string? encryptedAllocation, DateTime now)
+    /// <summary>Ghi nhận một lần owner phân bổ lại "ai nhận gì" (Grant mới thay toàn bộ Grant cũ).</summary>
+    public void RegisterKeyDistribution(string? encryptedAllocation, DateTime now)
     {
-        var min = keyHolderCount >= 2 ? 2 : 1;
-        if (keyHolderCount < 1 || threshold < min || threshold > keyHolderCount)
-        {
-            throw new BusinessException(DeathNoteErrorCodes.InvalidThreshold)
-                .WithData("Min", min).WithData("Max", Math.Max(1, keyHolderCount));
-        }
-        Threshold = threshold;
-        KeyHolderCount = keyHolderCount;
-        WrappedReleaseKey = Check.NotNullOrWhiteSpace(wrappedReleaseKey, nameof(wrappedReleaseKey));
         EncryptedAllocation = encryptedAllocation;
         KeyVersion++;
         KeysDistributedAt = now;
@@ -107,5 +94,5 @@ public class Vault : FullAuditedAggregateRoot<Guid>
         if (KeysDistributedAt.HasValue) KeysOutdated = true;
     }
 
-    public bool HasKeyDistribution => Threshold.HasValue && KeysDistributedAt.HasValue;
+    public bool HasKeyDistribution => KeysDistributedAt.HasValue;
 }

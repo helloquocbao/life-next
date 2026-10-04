@@ -41,7 +41,7 @@ public class LifecycleTests
     }
 
     [Fact]
-    public void Silence_escalates_Active_to_Missed_to_Grace_but_never_releases_by_itself()
+    public void Silence_escalates_Active_to_Missed_to_Grace_but_state_never_jumps_by_itself()
     {
         var o = NewOwner();
         var now = T0.AddDays(7);
@@ -62,10 +62,35 @@ public class LifecycleTests
         o.EnterGrace(now);
         o.State.ShouldBe(LifecycleState.Grace);
 
-        // Kể cả im lặng thêm 1 năm, hồ sơ vẫn ở Grace: chỉ con người mới khởi tạo được yêu cầu mở.
-        o.CanAcceptReleaseRequest(now.AddDays(1), Policy).ShouldBeFalse(); // còn trong ân hạn
-        o.CanAcceptReleaseRequest(now.AddDays(365), Policy).ShouldBeTrue();
+        // Bản thân OwnerProfile không tự đổi trạng thái theo thời gian: hết ân hạn chỉ làm "đủ điều kiện bàn giao",
+        // còn việc chuyển sang Released do LifecycleManager gọi một cách có chủ đích.
+        o.ShouldReleaseAutomatically(now.AddDays(1), Policy).ShouldBeFalse(); // còn trong ân hạn
+        o.ShouldReleaseAutomatically(now.AddDays(365), Policy).ShouldBeTrue();
         o.State.ShouldBe(LifecycleState.Grace);
+    }
+
+    [Fact]
+    public void Automatic_release_only_happens_from_grace_after_the_grace_period()
+    {
+        var o = DriveTo(LifecycleState.Grace);
+        var end = o.GraceEndsAt(Policy)!.Value;
+        o.ShouldReleaseAutomatically(end.AddMinutes(-1), Policy).ShouldBeFalse();
+        o.ShouldReleaseAutomatically(end, Policy).ShouldBeTrue();
+
+        o.ReleaseAutomatically(end);
+        o.State.ShouldBe(LifecycleState.Released);
+        o.ShouldReleaseAutomatically(end.AddDays(1), Policy).ShouldBeFalse();
+        Should.Throw<BusinessException>(() => o.CheckIn(end.AddDays(1), Policy)).Code.ShouldBe(DeathNoteErrorCodes.AlreadyReleased);
+    }
+
+    [Theory]
+    [InlineData(LifecycleState.Active)]
+    [InlineData(LifecycleState.Missed)]
+    public void Cannot_release_automatically_before_grace(LifecycleState target)
+    {
+        var o = DriveTo(target);
+        o.ShouldReleaseAutomatically(T0.AddDays(1000), Policy).ShouldBeFalse();
+        Should.Throw<BusinessException>(() => o.ReleaseAutomatically(T0.AddDays(1000))).Code.ShouldBe(DeathNoteErrorCodes.ReleaseNotAllowedInState);
     }
 
     [Theory]

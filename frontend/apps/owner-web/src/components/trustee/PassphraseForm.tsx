@@ -1,5 +1,5 @@
 /**
- * Ô nhập passphrase để mở khoá cá nhân — dùng ở hộp nhận và khi đồng thuận.
+ * Ô nhập passphrase để mở khoá cá nhân — dùng ở hộp nhận.
  *
  * Passphrase không bao giờ rời trình duyệt: nó chỉ dùng để dẫn xuất khoá (Argon2id) mở khoá riêng.
  * Việc dẫn xuất cố ý chậm (vài giây) để chống dò mật khẩu — hiển thị tiến trình cho người dùng yên tâm.

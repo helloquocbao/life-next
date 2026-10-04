@@ -5,7 +5,6 @@
  */
 export * from './encoding';
 export * from './primitives';
-export * from './shamir';
 export * from './recovery';
 export * from './types';
 export * from './vault';

@@ -65,13 +65,13 @@ export function AbandonModal({ open, onClose }: { open: boolean; onClose: () => 
           description={
             <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
               <li>Toàn bộ hạng mục trong két hiện tại sẽ bị xoá vĩnh viễn.</li>
-              <li>Mọi mảnh khoá đã phát cho người thân sẽ bị vô hiệu.</li>
+              <li>Mọi phần đã chuẩn bị cho người nhận sẽ bị xoá.</li>
               <li>Không ai — kể cả PICO — có thể khôi phục lại dữ liệu cũ sau bước này.</li>
             </ul>
           } />
         <Typography.Paragraph style={{ margin: 0 }}>
           Sau khi xác nhận, bạn sẽ được đưa lại màn hình thiết lập để tạo két mới với mật khẩu chính
-          và 12 từ khôi phục mới. Người thân bạn đã mời vẫn còn nguyên — bạn chỉ cần phân mảnh khoá lại cho họ.
+          và 12 từ khôi phục mới. Người thân bạn đã thêm vẫn còn nguyên — bạn chỉ cần chọn lại thông tin cho từng người nhận.
         </Typography.Paragraph>
         <Checkbox checked={ack1} onChange={(e) => setAck1(e.target.checked)}>
           Tôi hiểu toàn bộ dữ liệu trong két hiện tại sẽ mất vĩnh viễn.

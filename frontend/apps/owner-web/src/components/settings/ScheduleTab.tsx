@@ -44,7 +44,7 @@ export function ScheduleTab() {
             <Radio.Group optionType="button" buttonStyle="solid" style={{ width: '100%', maxWidth: 420, display: 'flex' }}
               options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày`, style: { flex: 1, textAlign: 'center' as const, paddingInline: 2, minWidth: 0, fontSize: 15, whiteSpace: 'nowrap' as const } }))} />
           </Form.Item>
-          <Form.Item name="graceDays" label="Thời gian ân hạn sau khi báo người thân (ngày)">
+          <Form.Item name="graceDays" label="Số ngày người nhắc nhở có để liên lạc với bạn, trước khi thông tin được gửi đi">
             <Slider min={7} max={30} marks={{ 7: '7', 14: '14', 21: '21', 30: '30' }} />
           </Form.Item>
           <Typography.Paragraph type="secondary">
@@ -55,9 +55,8 @@ export function ScheduleTab() {
       </Card>
       <Card title="Nhân viên liên hệ khi đến hạn" extra={<Tag color="gold">Trả phí định kỳ</Tag>}>
         <Typography.Paragraph type="secondary">
-          Khi bạn bỏ lỡ xác nhận "vẫn ổn", ngoài email/SMS tự động gửi cho người thân, nhân viên PICO sẽ
-          chủ động gọi điện liên hệ thêm với bạn (và người thân nếu cần) để xác minh trước khi tiến trình
-          tiếp tục leo thang.
+          Khi bạn bỏ lỡ xác nhận "vẫn ổn", ngoài các lần nhắc tự động, nhân viên PICO sẽ chủ động
+          gọi điện liên hệ thêm với bạn (và người nhắc nhở nếu cần) trước khi thời gian chờ kết thúc.
         </Typography.Paragraph>
         <Checkbox checked={!!s.staffContactOnMissed} onChange={(e) => setStaffContact(e.target.checked)}>
           Bật nhân viên chủ động liên hệ khi đến hạn

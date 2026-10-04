@@ -35,10 +35,7 @@ internal static class Mappers
             PassphraseWrappedKey = v.PassphraseWrappedKey,
             RecoveryWrappedKey = v.RecoveryWrappedKey,
             RecoverySalt = v.RecoverySalt,
-            WrappedReleaseKey = v.WrappedReleaseKey,
             EncryptedAllocation = v.EncryptedAllocation,
-            Threshold = v.Threshold,
-            KeyHolderCount = v.KeyHolderCount,
             KeyVersion = v.KeyVersion,
             KeysDistributedAt = v.KeysDistributedAt,
             KeysOutdated = v.KeysOutdated,
@@ -55,7 +52,7 @@ internal static class Mappers
         LastModificationTime = i.LastModificationTime
     };
 
-    public static TrusteeDto ToDto(this Trustee t, bool hasShare, int grantItems) => new()
+    public static TrusteeDto ToDto(this Trustee t, bool hasGrant, int grantItems) => new()
     {
         Id = t.Id,
         DisplayName = t.DisplayName,
@@ -69,7 +66,7 @@ internal static class Mappers
         AcceptedAt = t.AcceptedAt,
         LastContactResponse = t.LastContactResponse,
         LastContactResponseAt = t.LastContactResponseAt,
-        HasCurrentKeyShare = hasShare,
+        HasCurrentGrant = hasGrant,
         GrantItemCount = grantItems,
         CreationTime = t.CreationTime
     };

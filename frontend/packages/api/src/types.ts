@@ -33,9 +33,6 @@ export type SaveTrusteeInput = S['Trustees.SaveTrusteeInput'];
 export type InvitationDto = S['TrusteePortal.InvitationDto'];
 export type KeyringDto = S['TrusteePortal.KeyringDto'];
 export type AssignmentDto = S['TrusteePortal.AssignmentDto'];
-export type ReleaseProgressDto = S['TrusteePortal.ReleaseProgressDto'];
-export type ConsentMaterialDto = S['TrusteePortal.ConsentMaterialDto'];
-export type EvidenceBriefDto = S['TrusteePortal.EvidenceBriefDto'];
 export type InboxDto = S['TrusteePortal.InboxDto'];
 export type ReleasedItemDto = S['TrusteePortal.ReleasedItemDto'];
 
@@ -67,7 +64,8 @@ export type LifecycleState = S['Lifecycle.LifecycleState'];
 export const CheckInChannel = { MobileApp: 0, Web: 1, EmailLink: 2, SmsLink: 3 } as const;
 export type CheckInChannel = S['Lifecycle.CheckInChannel'];
 
-export const TrusteeRole = { KeyHolder: 0, ContentOnly: 1, Verifier: 2 } as const;
+/** Recipient: tự động nhận phần owner phân sau khi hết ân hạn. Reminder: được báo trước, nhiệm vụ nhắc owner bấm "Tôi vẫn ổn". */
+export const TrusteeRole = { Recipient: 1, Reminder: 2 } as const;
 export type TrusteeRole = S['Trustees.TrusteeRole'];
 
 export const TrusteeStatus = { Pending: 0, Confirmed: 1, Unresponsive: 2, NotInvitedYet: 3 } as const;
@@ -76,7 +74,7 @@ export type TrusteeStatus = S['Trustees.TrusteeStatus'];
 export const ContactResponse = { CanReach: 0, CannotReach: 1 } as const;
 export type ContactResponse = S['Trustees.ContactResponse'];
 
-export const TrusteePhase = { Normal: 0, Alert: 1, Verifying: 2, Released: 3 } as const;
+export const TrusteePhase = { Normal: 0, Alert: 1, Released: 2 } as const;
 export type TrusteePhase = S['TrusteePortal.TrusteePhase'];
 
 export const ReleaseReason = { LostContact: 0, Hospitalized: 1, Accident: 2, Deceased: 3 } as const;

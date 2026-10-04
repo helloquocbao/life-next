@@ -1,16 +1,15 @@
 /**
- * Luồng mở hộp nhận — toàn bộ phần giải mã diễn ra trên trình duyệt của trustee:
+ * Luồng mở hộp nhận — toàn bộ phần giải mã diễn ra trên trình duyệt của người nhận:
  *
  *   passphrase ──Argon2id──▶ KEK ──▶ mở khoá riêng (X25519)
- *   GET inbox ──▶ các mảnh Shamir đã niêm phong cho mình + grant (niêm phong 2 lớp)
- *   mở từng mảnh bằng khoá riêng ──▶ ghép ≥ m mảnh ──▶ ReleaseKey
- *   mở grant: lớp ngoài bằng khoá riêng, lớp trong bằng ReleaseKey ──▶ GrantPayload (thư + ItemKey)
+ *   GET inbox ──▶ grant đã niêm phong riêng cho mình (crypto_box_seal bằng khoá công khai của mình)
+ *   mở grant bằng khoá riêng ──▶ GrantPayload (thư + ItemKey các hạng mục được phân)
  *   GET released-items ──▶ ciphertext ──ItemKey──▶ nội dung hạng mục
  *
- * Server chỉ thấy ciphertext; nó không biết trustee được phân mục nào (grant đã mã hoá).
+ * Server chỉ thấy ciphertext; nó không biết người nhận được phân mục nào (grant đã niêm phong).
  */
 import { unwrap, type KeyringDto } from '@deathnote/api';
-import { decryptItemWithKey, openInbox, wipe } from '@deathnote/crypto';
+import { decryptItemWithKey, openGrant, wipe } from '@deathnote/crypto';
 import { api } from '../config';
 import { unlockWithPassphrase } from './keyring';
 import type { OpenedInbox, OpenedItem } from '../session/inboxSession';
@@ -31,21 +30,17 @@ export async function openInboxWithPassphrase(
   const keys = await unlockWithPassphrase(keyring, passphrase);
 
   try {
-    // Bước 2: lấy các mảnh khoá + grant đã niêm phong cho mình.
-    onProgress('Đang tải các mảnh khoá…');
+    // Bước 2: lấy phần đã niêm phong riêng cho mình.
+    onProgress('Đang tải phần dành cho bạn…');
     const inbox = await unwrap(api.GET('/api/app/trustee-portal/inbox/{trusteeId}', { params: { path: { trusteeId } } }));
-    const sealedShares = inbox.sealedShares ?? [];
-    const threshold = inbox.threshold ?? 0;
-    if (sealedShares.length < threshold)
-      throw new Error(`Chưa đủ mảnh khoá (${sealedShares.length}/${threshold}). Vui lòng thử lại sau ít phút.`);
 
-    // Bước 3: ghép khoá Shamir và mở grant — chỉ trên trình duyệt này.
-    onProgress('Đang ghép khoá và mở phần được giao cho bạn…');
+    // Bước 3: mở grant bằng khoá riêng — chỉ trên trình duyệt này.
+    onProgress('Đang mở phần được giao cho bạn…');
     let grant;
     try {
-      grant = await openInbox({ keys, sealedShares, threshold, sealedGrant: inbox.sealedGrant });
+      grant = await openGrant({ keys, sealedGrant: inbox.sealedGrant });
     } catch {
-      throw new Error('Không ghép được khoá từ các mảnh nhận được. Vui lòng liên hệ PICO để được hỗ trợ.');
+      throw new Error('Không mở được phần dành cho bạn. Có thể phần này đã thay đổi — vui lòng liên hệ người thân của owner hoặc đội hỗ trợ.');
     }
     if (!grant) throw new Error('Người uỷ quyền không phân hạng mục nào cho bạn trong hồ sơ này.');
 

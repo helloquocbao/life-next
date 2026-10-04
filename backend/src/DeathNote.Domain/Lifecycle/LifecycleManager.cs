@@ -4,6 +4,7 @@ using DeathNote.Notifications;
 using DeathNote.Owners;
 using DeathNote.Releases;
 using DeathNote.Trustees;
+using DeathNote.Vaults;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Repositories;
@@ -12,9 +13,9 @@ using Volo.Abp.Domain.Services;
 namespace DeathNote.Lifecycle;
 
 /// <summary>
-/// Domain service điều phối vòng đời hồ sơ: check-in (kèm quyền phủ quyết), leo thang nhắc nhở,
-/// chuyển Missed → Grace và báo cho người thân. Được gọi bởi app service (hành động của owner)
-/// và bởi <see cref="LifecycleWorker"/> (theo thời gian).
+/// Domain service điều phối vòng đời hồ sơ: check-in (kèm quyền phủ quyết), leo thang nhắc owner,
+/// chuyển Missed → Grace (báo người nhắc nhở), hết ân hạn thì TỰ ĐỘNG bàn giao cho người nhận.
+/// Được gọi bởi app service (hành động của owner) và bởi <see cref="LifecycleWorker"/> (theo thời gian).
 /// </summary>
 public class LifecycleManager : DomainService
 {
@@ -22,6 +23,7 @@ public class LifecycleManager : DomainService
     private readonly IRepository<Heartbeat, Guid> _heartbeats;
     private readonly IRepository<Trustee, Guid> _trustees;
     private readonly IRepository<ReleaseRequest, Guid> _releases;
+    private readonly IRepository<Grant, Guid> _grants;
     private readonly LifecyclePolicy _policy;
     private readonly AuditTrailManager _audit;
     private readonly INotificationSender _notifier;
@@ -36,6 +38,7 @@ public class LifecycleManager : DomainService
         IRepository<Heartbeat, Guid> heartbeats,
         IRepository<Trustee, Guid> trustees,
         IRepository<ReleaseRequest, Guid> releases,
+        IRepository<Grant, Guid> grants,
         LifecyclePolicy policy,
         AuditTrailManager audit,
         INotificationSender notifier,
@@ -49,6 +52,7 @@ public class LifecycleManager : DomainService
         _heartbeats = heartbeats;
         _trustees = trustees;
         _releases = releases;
+        _grants = grants;
         _policy = policy;
         _audit = audit;
         _notifier = notifier;
@@ -102,10 +106,12 @@ public class LifecycleManager : DomainService
         await _audit.RecordAsync(new AuditEntry(AuditActions.OwnerVeto, owner.Id, ActorType: AuditActorType.Owner,
             ActorUserId: owner.Id, ActorName: owner.DisplayName, Detail: $"Huỷ tiến trình từ trạng thái {previous}"));
 
-        // Chỉ báo cho trustee nếu họ đã từng được thông báo (từ Grace trở đi).
+        // Chỉ báo những người nhắc nhở đã từng được thông báo (từ Grace trở đi). Người nhận thông tin
+        // chưa bao giờ biết chuyện gì xảy ra nên không có gì để "huỷ".
         if (previous >= LifecycleState.Grace)
         {
-            foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.Confirmed))
+            foreach (var t in await _trustees.GetListAsync(t =>
+                         t.OwnerId == owner.Id && t.Role == TrusteeRole.Reminder && t.Status != TrusteeStatus.NotInvitedYet))
             {
                 var (subject, body) = await _templates.TrusteeCancelledAsync(t.DisplayName, owner.DisplayName);
                 await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
@@ -135,8 +141,8 @@ public class LifecycleManager : DomainService
             owner.MarkMissed(now);
             await RecordStateChangeAsync(owner, LifecycleState.Active);
             // Owner không muốn người thân biết trước — chỉ đến đây, lúc thật sự bỏ lỡ xác nhận, hệ thống
-            // mới tự động gửi lời mời cho những người owner đã thêm nhưng chưa từng tiết lộ (NotInvitedYet).
-            await InviteNotYetInvitedTrusteesAsync(owner, now);
+            // mới tự động mời những người nhắc nhở owner đã thêm nhưng chưa từng tiết lộ (NotInvitedYet).
+            await InviteNotYetInvitedRemindersAsync(owner, now);
         }
 
         // Missed: leo thang từng vòng nhắc
@@ -145,12 +151,18 @@ public class LifecycleManager : DomainService
             await SendReminderAsync(owner, step, now);
         }
 
-        // Missed → Grace: báo cho người thân mức "hãy liên lạc"
+        // Missed → Grace: báo cho người nhắc nhở "hãy liên lạc với owner, nhắc họ bấm Tôi vẫn ổn"
         if (owner.ShouldEnterGrace(now, _policy))
         {
             owner.EnterGrace(now);
             await RecordStateChangeAsync(owner, LifecycleState.Missed);
-            await NotifyTrusteesGraceAsync(owner, now);
+            await NotifyRemindersAsync(owner, now);
+        }
+
+        // Grace → Released: hết ân hạn mà owner vẫn im lặng → tự động bàn giao cho người nhận
+        if (owner.ShouldReleaseAutomatically(now, _policy))
+        {
+            await ReleaseToRecipientsAsync(owner, now);
         }
 
         await _owners.UpdateAsync(owner);
@@ -176,9 +188,15 @@ public class LifecycleManager : DomainService
             Detail: $"Vòng {step + 1}/{_policy.ReminderSteps} — kênh {channelName}"));
     }
 
-    private async Task InviteNotYetInvitedTrusteesAsync(OwnerProfile owner, DateTime now)
+    /// <summary>
+    /// Lúc owner thật sự bỏ lỡ xác nhận, tự gửi lời mời cho những NGƯỜI NHẮC NHỞ owner đã thêm nhưng chưa
+    /// từng tiết lộ (NotInvitedYet) — họ không cần khoá nên mời lúc này vẫn kịp. Người nhận thông tin thì
+    /// KHÔNG: phần dành cho họ phải được niêm phong bằng khoá công khai của họ từ trước, owner chủ động mời.
+    /// </summary>
+    private async Task InviteNotYetInvitedRemindersAsync(OwnerProfile owner, DateTime now)
     {
-        foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.NotInvitedYet))
+        foreach (var t in await _trustees.GetListAsync(t =>
+                     t.OwnerId == owner.Id && t.Status == TrusteeStatus.NotInvitedYet && t.Role == TrusteeRole.Reminder))
         {
             await _invitationSender.SendAsync(owner, t, now);
             await _audit.RecordAsync(new AuditEntry(AuditActions.TrusteeInvited, owner.Id, t.Id,
@@ -186,14 +204,46 @@ public class LifecycleManager : DomainService
         }
     }
 
-    private async Task NotifyTrusteesGraceAsync(OwnerProfile owner, DateTime now)
+    /// <summary>Báo người nhắc nhở: owner im lặng, còn đúng chừng này ngày trước khi thông tin được gửi đi.</summary>
+    private async Task NotifyRemindersAsync(OwnerProfile owner, DateTime now)
     {
         var silentDays = owner.LastCheckInAt.HasValue
             ? (int)Math.Round((now - owner.LastCheckInAt.Value).TotalDays * _policy.Options.TimeScale)
             : 0;
-        foreach (var t in await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Status == TrusteeStatus.Confirmed))
+        var reminders = await _trustees.GetListAsync(t =>
+            t.OwnerId == owner.Id && t.Role == TrusteeRole.Reminder && t.Status != TrusteeStatus.NotInvitedYet);
+        foreach (var t in reminders)
         {
-            var (subject, body) = await _templates.TrusteeGraceAlertAsync(t.DisplayName, owner.DisplayName, silentDays, _urls.AppUrl);
+            var (subject, body) = await _templates.TrusteeGraceAlertAsync(t.DisplayName, owner.DisplayName, silentDays, owner.GraceDays, _urls.AppUrl);
+            await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
+                NotificationChannels.Email | NotificationChannels.Sms));
+        }
+        await _audit.RecordAsync(new AuditEntry(AuditActions.RemindersNotified, owner.Id,
+            Detail: $"Đã báo {reminders.Count} người nhắc nhở — còn {owner.GraceDays} ngày trước khi bàn giao"));
+    }
+
+    /// <summary>
+    /// Hết ân hạn: chuyển hồ sơ sang Released. Từ lúc này server mới trao phần đã niêm phong (Grant) cho từng
+    /// người nhận — mỗi người tự mở bằng khoá cá nhân trên thiết bị của họ. Chỉ báo những người nhận THỰC SỰ
+    /// có phần để mở (đã hoàn tất lời mời + được owner phân hạng mục/thư), tránh gửi thông báo rỗng.
+    /// </summary>
+    private async Task ReleaseToRecipientsAsync(OwnerProfile owner, DateTime now)
+    {
+        owner.ReleaseAutomatically(now);
+        await RecordStateChangeAsync(owner, LifecycleState.Grace);
+
+        var grants = await _grants.GetListAsync(g => g.OwnerId == owner.Id);
+        var recipients = (await _trustees.GetListAsync(t =>
+                t.OwnerId == owner.Id && t.Role == TrusteeRole.Recipient && t.Status == TrusteeStatus.Confirmed))
+            .Where(t => grants.Any(g => g.TrusteeId == t.Id))
+            .ToList();
+
+        await _audit.RecordAsync(new AuditEntry(AuditActions.AutoReleased, owner.Id,
+            Detail: $"Hết {owner.GraceDays} ngày ân hạn mà owner không xác nhận — tự động bàn giao cho {recipients.Count} người nhận"));
+
+        foreach (var t in recipients)
+        {
+            var (subject, body) = await _templates.TrusteeReleasedAsync(t.DisplayName, owner.DisplayName, _urls.AppUrl);
             await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
                 NotificationChannels.Email | NotificationChannels.Sms));
         }

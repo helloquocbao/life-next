@@ -6,14 +6,14 @@
  *   /             Home — "Bạn đang ổn. Lần check-in tiếp theo: …"
  *   /vault        Két thông tin — nơi THẬT SỰ tạo két (đặt passphrase + 12 từ) khi vào lần đầu
  *   /assets       Tài sản & quyền lợi
- *   /recipients   Người nhận, ngưỡng m-of-n, phân bổ
+ *   /recipients   Người thân: người nhắc nhở + người nhận thông tin, chọn thông tin cho từng người nhận
  *   /dry-run      Diễn tập quy trình
  *   /settings     Cài đặt & an toàn
  *   /check-in     Check-in một chạm từ email/SMS (không cần đăng nhập)
  *
  *   VAI TRÒ TRUSTEE (được người khác nhờ giữ khoá) — KHÔNG bắt buộc phải hoàn tất onboarding owner:
  *   /invite               Xem lời mời (công khai, chưa cần đăng nhập) — layout riêng, không có sidebar
- *   /assignments          "Hồ sơ tôi giữ giúp" — danh sách những owner đã thêm mình làm trustee
+ *   /assignments          "Hồ sơ tôi giữ giúp" — những owner đã giao mình vai trò (người nhắc nhở / người nhận thông tin)
  *   /keyring              Tạo khoá cá nhân (X25519) cho vai trò trustee
  *   /inbox/:trusteeId     Hộp nhận sau khi hồ sơ owner đã được mở
  *

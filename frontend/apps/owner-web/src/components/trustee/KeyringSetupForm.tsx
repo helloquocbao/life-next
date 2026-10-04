@@ -3,7 +3,7 @@
  *
  * Mật mã: trình duyệt sinh cặp khoá X25519; khoá riêng được mã hoá bằng khoá dẫn xuất từ passphrase
  * (Argon2id) trước khi gửi lên. Server/PICO chỉ giữ bản đã mã hoá + khoá công khai ⇒ KHÔNG THỂ khôi phục
- * passphrase. Owner dùng khoá công khai này để niêm phong mảnh khoá Shamir và phần nội dung dành cho bạn.
+ * passphrase. Owner dùng khoá công khai này để niêm phong phần nội dung dành cho bạn.
  */
 import { useState } from 'react';
 import { App, Alert, Button, Checkbox, Form, Input, Typography } from 'antd';

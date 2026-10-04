@@ -1,15 +1,25 @@
 namespace DeathNote.Trustees;
 
-/// <summary>Vai trò của một người được uỷ quyền trong hồ sơ của owner.</summary>
+/// <summary>
+/// Vai trò của một người trong hồ sơ của owner. Luồng bàn giao là TỰ ĐỘNG theo thời gian (không còn đồng thuận
+/// m-of-n hay thẩm định): owner im lặng → nhắc owner → báo <see cref="Reminder"/> → hết ân hạn → gửi cho
+/// <see cref="Recipient"/>.
+/// </summary>
 public enum TrusteeRole
 {
+    // Giá trị 0 (KeyHolder — người giữ mảnh khoá) đã bị bỏ cùng cơ chế m-of-n; dữ liệu cũ được đổi
+    // sang Recipient bằng migration. Giữ nguyên số của hai vai trò còn lại để không phải đổi dữ liệu.
+
     /// <summary>
-    /// Người giữ mảnh khoá: nhận 1 mảnh Shamir của khoá phát hành. Đồng thuận của họ
-    /// mới được tính vào ngưỡng m-of-n (vì chỉ họ đóng góp được mảnh khoá thật).
+    /// Người nhận thông tin: sau khi hết thời gian ân hạn mà owner vẫn không xác nhận, hệ thống tự động mở
+    /// toàn bộ phần owner đã phân cho người này. Cần hoàn tất lời mời + tạo khoá cá nhân TRƯỚC (phần được
+    /// niêm phong bằng khoá công khai của họ).
     /// </summary>
-    KeyHolder = 0,
-    /// <summary>Chỉ nhận nội dung được phân sau khi hồ sơ được mở; không tham gia đồng thuận.</summary>
-    ContentOnly = 1,
-    /// <summary>Người xác nhận: có thể khởi tạo yêu cầu và nộp bằng chứng, không giữ mảnh khoá.</summary>
-    Verifier = 2
+    Recipient = 1,
+
+    /// <summary>
+    /// Người nhắc nhở: được báo khi owner không còn xác nhận, việc duy nhất là liên lạc và nhắc owner bấm
+    /// "Tôi vẫn ổn". Không nhận bất kỳ thông tin nào trong két và không cần tạo khoá.
+    /// </summary>
+    Reminder = 2
 }

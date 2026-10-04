@@ -2,23 +2,21 @@ using DeathNote.AuditTrail;
 using DeathNote.Common;
 using DeathNote.Lifecycle;
 using DeathNote.Owners;
-using DeathNote.Releases;
 using DeathNote.Trustees;
 using DeathNote.Vaults;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
-using Volo.Abp.BlobStoring;
-using Volo.Abp.Content;
 using Volo.Abp.Domain.Repositories;
 
 namespace DeathNote.TrusteePortal;
 
 /// <summary>
-/// Cổng dành cho người được uỷ quyền. Nguyên tắc UX: web-first, không bắt cài app,
+/// Cổng dành cho người được owner giao vai trò. Nguyên tắc UX: web-first, không bắt cài app,
 /// mỗi màn hình chỉ một việc cần làm — vì ngày họ cần đến là ngày tâm lý tệ nhất.
 /// <para>
-/// Mọi phương thức đều kiểm tra người dùng hiện tại đúng là trustee của hồ sơ liên quan,
-/// và cắt dữ liệu theo giai đoạn (bảng "Ai thấy gì").
+/// Hai vai trò: <b>Người nhắc nhở</b> (được báo khi owner im lặng, nhiệm vụ nhắc owner bấm "Tôi vẫn ổn") và
+/// <b>Người nhận thông tin</b> (tự động nhận phần owner phân sau khi hết ân hạn). Mọi phương thức đều kiểm tra người
+/// dùng hiện tại đúng là trustee của hồ sơ liên quan và cắt dữ liệu theo vai trò + giai đoạn.
 /// </para>
 /// </summary>
 [Authorize]
@@ -29,12 +27,8 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
     private readonly IRepository<OwnerProfile, Guid> _owners;
     private readonly IRepository<Vault, Guid> _vaults;
     private readonly IRepository<VaultItem, Guid> _items;
-    private readonly IRepository<KeyShare, Guid> _keyShares;
     private readonly IRepository<Grant, Guid> _grants;
-    private readonly IRepository<ReleaseRequest, Guid> _releases;
     private readonly IRepository<AuditEvent, Guid> _auditEvents;
-    private readonly IBlobContainer<EvidenceContainer> _evidenceBlobs;
-    private readonly ReleaseManager _releaseManager;
     private readonly LifecyclePolicy _policy;
 
     public TrusteePortalAppService(
@@ -43,12 +37,8 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         IRepository<OwnerProfile, Guid> owners,
         IRepository<Vault, Guid> vaults,
         IRepository<VaultItem, Guid> items,
-        IRepository<KeyShare, Guid> keyShares,
         IRepository<Grant, Guid> grants,
-        IRepository<ReleaseRequest, Guid> releases,
         IRepository<AuditEvent, Guid> auditEvents,
-        IBlobContainer<EvidenceContainer> evidenceBlobs,
-        ReleaseManager releaseManager,
         LifecyclePolicy policy)
     {
         _trustees = trustees;
@@ -56,12 +46,8 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         _owners = owners;
         _vaults = vaults;
         _items = items;
-        _keyShares = keyShares;
         _grants = grants;
-        _releases = releases;
         _auditEvents = auditEvents;
-        _evidenceBlobs = evidenceBlobs;
-        _releaseManager = releaseManager;
         _policy = policy;
     }
 
@@ -89,7 +75,7 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         var keyring = await _keyrings.FindAsync(UserId);
         trustee.Accept(UserId, keyring?.PublicKey, Clock.Now);
         await _trustees.UpdateAsync(trustee, autoSave: true);
-        await MarkOwnerKeysOutdatedAsync(trustee.OwnerId);
+        if (trustee.Role == TrusteeRole.Recipient) await MarkOwnerKeysOutdatedAsync(trustee.OwnerId);
 
         await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeAccepted, trustee.OwnerId, trustee.Id, AuditActorType.Trustee,
             UserId, trustee.DisplayName, nameof(Trustee), trustee.Id.ToString()));
@@ -100,7 +86,7 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
 
     /// <summary>
     /// Lưu cặp khoá cá nhân (khoá riêng đã bọc bằng passphrase của trustee). Sau đó gắn khoá công khai
-    /// vào mọi hồ sơ mà người này là trustee, để owner có thể phân mảnh khoá cho họ.
+    /// vào mọi hồ sơ mà người này là trustee, để owner có thể niêm phong phần dành cho họ.
     /// </summary>
     public async Task<KeyringDto> CreateKeyringAsync(CreateKeyringInput input)
     {
@@ -114,7 +100,7 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         {
             t.SetPublicKey(input.PublicKey);
             await _trustees.UpdateAsync(t);
-            await MarkOwnerKeysOutdatedAsync(t.OwnerId);
+            if (t.Role == TrusteeRole.Recipient) await MarkOwnerKeysOutdatedAsync(t.OwnerId);
             await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeKeyringCreated, t.OwnerId, t.Id, AuditActorType.Trustee,
                 UserId, t.DisplayName));
         }
@@ -130,16 +116,19 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
     }
 
     // =====================================================================
-    //  GIAI ĐOẠN 2 — Cảnh báo & xác minh
+    //  GIAI ĐOẠN 2 — Cảnh báo (người nhắc nhở)
     // =====================================================================
 
-    /// <summary>"Tôi vẫn liên lạc được" / "Tôi không liên lạc được" — chặn phần lớn báo động giả.</summary>
+    /// <summary>
+    /// Người nhắc nhở ghi nhận "đã liên lạc được owner" / "chưa liên lạc được". Chỉ để owner và đội vận hành thấy
+    /// ai đã làm gì — KHÔNG làm đổi thời hạn: chỉ có owner bấm "Tôi vẫn ổn" mới dừng được việc bàn giao.
+    /// </summary>
     public async Task RespondContactAsync(ContactResponseInput input)
     {
         var trustee = await GetMyTrusteeAsync(input.TrusteeId);
+        if (trustee.Role != TrusteeRole.Reminder) throw new BusinessException(DeathNoteErrorCodes.NotATrustee);
         var owner = await _owners.GetAsync(trustee.OwnerId);
-        if (owner.State < LifecycleState.Grace || owner.State == LifecycleState.Released)
-            throw new BusinessException(DeathNoteErrorCodes.ReleaseNotAllowedInState);
+        if (owner.State != LifecycleState.Grace) throw new BusinessException(DeathNoteErrorCodes.ReleaseNotAllowedInState);
 
         trustee.RecordContactResponse(input.Response, Clock.Now);
         await _trustees.UpdateAsync(trustee);
@@ -147,107 +136,20 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
             UserId, trustee.DisplayName, Detail: input.Response == ContactResponse.CanReach ? "Vẫn liên lạc được" : "Không liên lạc được"));
     }
 
-    public async Task<ReleaseProgressDto> InitiateReleaseAsync(InitiateReleaseInput input)
-    {
-        var trustee = await GetMyTrusteeAsync(input.TrusteeId);
-        var owner = await _owners.GetAsync(trustee.OwnerId);
-        var request = await _releaseManager.InitiateAsync(owner, trustee, input.Reason, input.Statement);
-        return await BuildProgressAsync(await _releases.GetWithDetailsAsync(request.Id, AsyncExecuter), trustee);
-    }
-
-    /// <summary>
-    /// Vật liệu để đồng thuận: mảnh khoá của chính mình (niêm phong cho mình) + khoá công khai của
-    /// các trustee nhận. Trình duyệt sẽ mở mảnh bằng khoá riêng rồi niêm phong lại cho từng người.
-    /// </summary>
-    public async Task<ConsentMaterialDto> GetConsentMaterialAsync(Guid requestId)
-    {
-        var request = await _releases.GetAsync(requestId);
-        var trustee = await GetMyTrusteeForOwnerAsync(request.OwnerId);
-        if (trustee.Role != TrusteeRole.KeyHolder) throw new BusinessException(DeathNoteErrorCodes.OnlyKeyHoldersCanConsent);
-        var share = await _keyShares.FirstOrDefaultAsync(k => k.TrusteeId == trustee.Id && k.KeyVersion == request.KeyVersion)
-                    ?? throw new BusinessException(DeathNoteErrorCodes.OnlyKeyHoldersCanConsent);
-        var recipients = (await _trustees.GetListAsync(t => t.OwnerId == request.OwnerId && t.Id != trustee.Id))
-            .Where(t => t.IsReadyForKeys)
-            .Select(t => new RecipientKeyDto { TrusteeId = t.Id, DisplayName = t.DisplayName, PublicKey = t.PublicKey! })
-            .ToList();
-        return new ConsentMaterialDto
-        {
-            RequestId = requestId,
-            MyTrusteeId = trustee.Id,
-            MySealedShare = share.SealedShare,
-            Recipients = recipients
-        };
-    }
-
-    public async Task<ReleaseProgressDto> ConsentAsync(Guid requestId, ConsentInput input)
-    {
-        var request = await _releases.GetWithDetailsAsync(requestId, AsyncExecuter);
-        var trustee = await GetMyTrusteeForOwnerAsync(request.OwnerId);
-        await _releaseManager.ConsentAsync(request, trustee, input.Statement,
-            input.Deliveries.Select(d => (d.ToTrusteeId, d.SealedShare)).ToList());
-        return await BuildProgressAsync(request, trustee);
-    }
-
-    /// <summary>Nộp tệp bằng chứng (≤ 10 MB). Tệp được lưu ở kho riêng, tự xoá sau khi đóng hồ sơ.</summary>
-    public async Task<EvidenceBriefDto> UploadEvidenceAsync(Guid requestId, EvidenceKind kind, IRemoteStreamContent file)
-    {
-        var request = await _releases.GetWithDetailsAsync(requestId, AsyncExecuter);
-        var trustee = await GetMyTrusteeForOwnerAsync(request.OwnerId);
-        if (trustee.Role == TrusteeRole.ContentOnly) throw new BusinessException(DeathNoteErrorCodes.NotATrustee);
-
-        await using var input = file.GetStream();
-        using var buffer = new MemoryStream();
-        await input.CopyToAsync(buffer);
-        if (buffer.Length > DeathNoteConsts.MaxEvidenceFileBytes) throw new BusinessException(DeathNoteErrorCodes.EvidenceTooLarge);
-
-        var blobName = $"{requestId:N}/{GuidGenerator.Create():N}";
-        var evidence = request.AddEvidence(GuidGenerator.Create(), trustee.Id, kind, file.FileName ?? "evidence",
-            file.ContentType ?? "application/octet-stream", buffer.Length, blobName, Clock.Now);
-        buffer.Position = 0;
-        await _evidenceBlobs.SaveAsync(blobName, buffer);
-        await _releases.UpdateAsync(request);
-
-        await Audit.RecordAsync(new AuditEntry(AuditActions.EvidenceUploaded, request.OwnerId, trustee.Id, AuditActorType.Trustee,
-            UserId, trustee.DisplayName, nameof(ReleaseRequest), request.Id.ToString(), $"{kind}: {evidence.FileName}"));
-        return new EvidenceBriefDto
-        {
-            Id = evidence.Id,
-            Kind = evidence.Kind,
-            FileName = evidence.FileName,
-            SizeBytes = evidence.SizeBytes,
-            UploadedAt = evidence.UploadedAt
-        };
-    }
-
-    public async Task<ReleaseProgressDto> ResubmitAsync(Guid requestId)
-    {
-        var request = await _releases.GetWithDetailsAsync(requestId, AsyncExecuter);
-        var trustee = await GetMyTrusteeForOwnerAsync(request.OwnerId);
-        request.ResubmitForReview(Clock.Now);
-        await _releases.UpdateAsync(request);
-        await Audit.RecordAsync(new AuditEntry(AuditActions.EvidenceUploaded, request.OwnerId, trustee.Id, AuditActorType.Trustee,
-            UserId, trustee.DisplayName, nameof(ReleaseRequest), request.Id.ToString(), $"Gửi lại hồ sơ — vòng {request.ReviewRound}"));
-        return await BuildProgressAsync(request, trustee);
-    }
-
     // =====================================================================
-    //  GIAI ĐOẠN 3 — Sau khi được mở
+    //  GIAI ĐOẠN 3 — Sau khi bàn giao (người nhận thông tin)
     // =====================================================================
 
     /// <summary>
-    /// Hộp nhận: trả về các mảnh khoá đã niêm phong cho mình + grant riêng. Việc ghép khoá (Shamir)
-    /// và giải mã hoàn toàn diễn ra trên trình duyệt của trustee.
+    /// Hộp nhận: trả Grant đã niêm phong cho đúng mình. Việc mở Grant (bằng khoá riêng của người nhận) và giải mã
+    /// hạng mục hoàn toàn diễn ra trên trình duyệt của họ. Chỉ mở được khi hồ sơ đã bàn giao.
     /// </summary>
     public async Task<InboxDto> GetInboxAsync(Guid trusteeId)
     {
-        var trustee = await GetMyTrusteeAsync(trusteeId);
-        var owner = await _owners.GetAsync(trustee.OwnerId);
-        var request = await GetReleasedRequestAsync(owner);
-
-        var shares = request.ShareDeliveries.Where(d => d.ToTrusteeId == trustee.Id).Select(d => d.SealedShare).ToList();
-        var own = await _keyShares.FirstOrDefaultAsync(k => k.TrusteeId == trustee.Id && k.KeyVersion == request.KeyVersion);
-        if (own != null) shares.Insert(0, own.SealedShare);
-        var grant = await _grants.FirstOrDefaultAsync(g => g.TrusteeId == trustee.Id && g.KeyVersion == request.KeyVersion);
+        var trustee = await GetMyRecipientAsync(trusteeId);
+        var owner = await GetReleasedOwnerAsync(trustee);
+        var version = (await _vaults.FindAsync(owner.Id))?.KeyVersion ?? -1;
+        var grant = await _grants.FirstOrDefaultAsync(g => g.TrusteeId == trustee.Id && g.KeyVersion == version);
 
         await Audit.RecordAsync(new AuditEntry(AuditActions.ReleasedDataAccessed, owner.Id, trustee.Id, AuditActorType.Trustee,
             UserId, trustee.DisplayName, Detail: $"Mở hộp nhận ({grant?.ItemCount ?? 0} hạng mục)"));
@@ -256,9 +158,7 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         {
             TrusteeId = trustee.Id,
             OwnerName = owner.DisplayName,
-            ReleasedAt = request.ReleasedAt!.Value,
-            Threshold = request.RequiredConsents,
-            SealedShares = shares,
+            ReleasedAt = owner.StateChangedAt,
             SealedGrant = grant?.SealedPayload,
             GrantItemCount = grant?.ItemCount ?? 0
         };
@@ -270,20 +170,19 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
     /// </summary>
     public async Task<List<ReleasedItemDto>> GetReleasedItemsAsync(GetReleasedItemsInput input)
     {
-        var trustee = await GetMyTrusteeAsync(input.TrusteeId);
-        var owner = await _owners.GetAsync(trustee.OwnerId);
-        await GetReleasedRequestAsync(owner);
+        var trustee = await GetMyRecipientAsync(input.TrusteeId);
+        var owner = await GetReleasedOwnerAsync(trustee);
         var ids = input.Ids.Take(500).ToList();
         var items = await _items.GetListAsync(i => i.OwnerId == owner.Id && ids.Contains(i.Id));
         return items.Select(i => new ReleasedItemDto { Id = i.Id, Ciphertext = i.Ciphertext }).ToList();
     }
 
-    /// <summary>Log liên quan đến mình: sự kiện gắn với chính trustee này + các bước của quy trình mở.</summary>
+    /// <summary>Log liên quan đến mình: sự kiện gắn với chính trustee này + sự kiện bàn giao tự động.</summary>
     public async Task<List<AuditEventDto>> GetActivityAsync(Guid trusteeId)
     {
         var trustee = await GetMyTrusteeAsync(trusteeId);
         var query = (await _auditEvents.GetQueryableAsync())
-            .Where(e => e.TrusteeId == trustee.Id || (e.OwnerId == trustee.OwnerId && e.Action.StartsWith("release.")))
+            .Where(e => e.TrusteeId == trustee.Id || (e.OwnerId == trustee.OwnerId && e.Action == AuditActions.AutoReleased))
             .OrderByDescending(e => e.Sequence).Take(100);
         return (await AsyncExecuter.ToListAsync(query)).Select(e => e.ToDto()).ToList();
     }
@@ -297,16 +196,14 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         var owner = await _owners.GetAsync(t.OwnerId);
         var vault = await _vaults.FindAsync(owner.Id);
         var version = vault?.KeyVersion ?? -1;
-        var others = await _trustees.CountAsync(x => x.OwnerId == owner.Id && x.Id != t.Id);
         var grant = await _grants.FirstOrDefaultAsync(g => g.TrusteeId == t.Id && g.KeyVersion == version);
-        var hasShare = await _keyShares.AnyAsync(k => k.TrusteeId == t.Id && k.KeyVersion == version);
 
+        // Người nhận thông tin KHÔNG được báo gì trước khi bàn giao (owner chưa muốn họ biết chuyện owner im lặng).
         var phase = owner.State switch
         {
-            LifecycleState.Grace => TrusteePhase.Alert,
-            LifecycleState.Verifying or LifecycleState.Review or LifecycleState.FinalWait => TrusteePhase.Verifying,
             LifecycleState.Released => TrusteePhase.Released,
-            _ => TrusteePhase.Normal // Active + Missed: trustee chưa được báo gì
+            LifecycleState.Grace when t.Role == TrusteeRole.Reminder => TrusteePhase.Alert,
+            _ => TrusteePhase.Normal
         };
 
         var dto = new AssignmentDto
@@ -317,71 +214,29 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
             Role = t.Role,
             Relationship = t.Relationship,
             Phase = phase,
-            OtherTrusteeCount = (int)others,
             GrantItemCount = grant?.ItemCount ?? 0,
-            HasKeyShare = hasShare,
+            HasGrant = grant != null,
             ServerNow = Clock.Now,
             TimeScale = _policy.Options.TimeScale
         };
 
-        if (phase == TrusteePhase.Normal) return dto;
+        if (phase == TrusteePhase.Released) dto.ReleasedAt = owner.StateChangedAt;
+        if (phase != TrusteePhase.Alert) return dto;
 
-        // Từ giai đoạn cảnh báo: được thấy trạng thái heartbeat.
         dto.LastCheckInAt = owner.LastCheckInAt;
         dto.SilentDays = owner.LastCheckInAt.HasValue
             ? (int)Math.Floor((Clock.Now - owner.LastCheckInAt.Value).TotalDays * _policy.Options.TimeScale) : null;
+        dto.ReleaseAt = owner.GraceEndsAt(_policy);
         dto.MyContactResponse = t.LastContactResponseAt > owner.LastCheckInAt ? t.LastContactResponse : null;
-        dto.CanInitiateFrom = owner.GraceEndsAt(_policy);
-        dto.CanInitiate = t.Role != TrusteeRole.ContentOnly && owner.CanAcceptReleaseRequest(Clock.Now, _policy);
-
-        var latest = (await _releases.GetListAsync(r => r.OwnerId == owner.Id)).OrderByDescending(r => r.InitiatedAt).FirstOrDefault();
-        if (latest != null && (latest.IsOpen || latest.Status is ReleaseStatus.Released or ReleaseStatus.Rejected))
-        {
-            dto.OpenRequest = await BuildProgressAsync(await _releases.GetWithDetailsAsync(latest.Id, AsyncExecuter), t);
-            dto.ReleasedAt = latest.ReleasedAt;
-        }
         return dto;
     }
 
-    private async Task<ReleaseProgressDto> BuildProgressAsync(ReleaseRequest r, Trustee me)
+    /// <summary>Hồ sơ phải đã bàn giao (Released) thì người nhận mới được lấy phần của mình.</summary>
+    private async Task<OwnerProfile> GetReleasedOwnerAsync(Trustee trustee)
     {
-        var trustees = await _trustees.GetListAsync(t => t.OwnerId == r.OwnerId);
-        var names = trustees.ToDictionary(t => t.Id, t => t.DisplayName);
-        var myShare = await _keyShares.AnyAsync(k => k.TrusteeId == me.Id && k.KeyVersion == r.KeyVersion);
-        return new ReleaseProgressDto
-        {
-            Id = r.Id,
-            Status = r.Status,
-            Reason = r.Reason,
-            Statement = r.Statement,
-            InitiatorName = names.GetValueOrDefault(r.InitiatorTrusteeId, "?"),
-            InitiatedAt = r.InitiatedAt,
-            RequiredConsents = r.RequiredConsents,
-            EffectiveConsents = r.EffectiveConsentCount(_policy.Options.EnforceDistinctConsentIp),
-            KeyHolderCount = trustees.Count(t => t.Role == TrusteeRole.KeyHolder && t.IsReadyForKeys),
-            Consents = r.Consents.OrderBy(c => c.ConsentedAt)
-                .Select(c => new ConsentBriefDto { TrusteeName = names.GetValueOrDefault(c.TrusteeId, "?"), ConsentedAt = c.ConsentedAt }).ToList(),
-            HaveIConsented = r.Consents.Any(c => c.TrusteeId == me.Id),
-            CanIConsent = r.Status == ReleaseStatus.AwaitingConsent && me.Role == TrusteeRole.KeyHolder && myShare
-                          && r.Consents.All(c => c.TrusteeId != me.Id),
-            Evidence = r.Evidence.OrderBy(e => e.UploadedAt).Select(e => new EvidenceBriefDto
-            {
-                Id = e.Id, Kind = e.Kind, FileName = e.FileName, SizeBytes = e.SizeBytes, UploadedAt = e.UploadedAt
-            }).ToList(),
-            ReviewRound = r.ReviewRound,
-            InfoRequestNote = r.Status == ReleaseStatus.NeedsMoreInfo ? r.InfoRequestNote : null,
-            FinalWaitUntil = r.FinalWaitUntil,
-            ReleasedAt = r.ReleasedAt,
-            CloseNote = r.Status == ReleaseStatus.Rejected ? r.CloseNote : null
-        };
-    }
-
-    private async Task<ReleaseRequest> GetReleasedRequestAsync(OwnerProfile owner)
-    {
+        var owner = await _owners.GetAsync(trustee.OwnerId);
         if (owner.State != LifecycleState.Released) throw new BusinessException(DeathNoteErrorCodes.ReleaseNotYetReleased);
-        var query = await _releases.WithAllDetailsAsync();
-        return await AsyncExecuter.FirstOrDefaultAsync(query.Where(r => r.OwnerId == owner.Id && r.Status == ReleaseStatus.Released))
-               ?? throw new BusinessException(DeathNoteErrorCodes.ReleaseNotYetReleased);
+        return owner;
     }
 
     private async Task<Trustee> FindByTokenAsync(string token)
@@ -399,9 +254,13 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         return t;
     }
 
-    private async Task<Trustee> GetMyTrusteeForOwnerAsync(Guid ownerId) =>
-        await _trustees.FirstOrDefaultAsync(t => t.OwnerId == ownerId && t.UserId == UserId)
-        ?? throw new BusinessException(DeathNoteErrorCodes.NotATrustee);
+    private async Task<Trustee> GetMyRecipientAsync(Guid trusteeId)
+    {
+        var t = await GetMyTrusteeAsync(trusteeId);
+        // Người nhắc nhở không nhận thông tin nào trong két.
+        if (t.Role != TrusteeRole.Recipient) throw new BusinessException(DeathNoteErrorCodes.NotATrustee);
+        return t;
+    }
 
     private async Task MarkOwnerKeysOutdatedAsync(Guid ownerId)
     {

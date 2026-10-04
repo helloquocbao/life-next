@@ -29,9 +29,7 @@ export const Context = {
   VaultKey: 'dn:v1:vault-key',
   ItemKey: 'dn:v1:item-key',
   Item: 'dn:v1:item',
-  ReleaseKey: 'dn:v1:release-key',
   Allocation: 'dn:v1:allocation',
-  Grant: 'dn:v1:grant',
   Keyring: 'dn:v1:keyring',
 } as const;
 export type ContextName = (typeof Context)[keyof typeof Context];
@@ -109,7 +107,7 @@ export async function generateBoxKeyPair(): Promise<BoxKeyPair> {
 
 /**
  * Niêm phong (sealed box): chỉ người giữ khoá riêng tương ứng với `publicKeyB64` mở được.
- * Người gửi không cần danh tính riêng — đúng mô hình owner gửi mảnh khoá cho từng trustee.
+ * Người gửi không cần danh tính riêng — đúng mô hình owner niêm phong phần dành cho từng người nhận.
  */
 export async function seal(message: Uint8Array, publicKeyB64: string): Promise<string> {
   const s = await getSodium();

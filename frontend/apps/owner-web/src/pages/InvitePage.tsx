@@ -2,14 +2,16 @@
  * Màn hình lời mời (công khai — xem được khi chưa đăng nhập).
  *
  * Luồng: xem lời mời → "Chấp nhận vai trò" → (chưa đăng nhập ⇒ form đăng nhập/đăng ký nhúng ngay trong
- *        trang, gọi REST API, không rời trang) → (chưa có khoá cá nhân ⇒ tạo khoá) → accept-invitation.
+ *        trang, gọi REST API, không rời trang) → (CHỈ người nhận thông tin, chưa có khoá cá nhân ⇒ tạo khoá)
+ *        → accept-invitation. Người nhắc nhở không cần khoá.
  *
  * Thứ tự "tạo khoá TRƯỚC khi chấp nhận" giúp backend gắn luôn khoá công khai vào hồ sơ khi accept,
- * để owner có thể phân mảnh khoá ngay.
+ * để owner có thể niêm phong phần dành cho người này ngay.
  */
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Alert, App, Button, Card, Result, Typography } from 'antd';
+import { TrusteeRole } from '@deathnote/api';
 import { ErrorAlert, FullPageSpin, LegalNotice, LoginForm } from '@deathnote/ui';
 import { auth } from '../config';
 import { useCurrentUser } from '../auth/useCurrentUser';
@@ -38,9 +40,12 @@ export function InvitePage() {
       },
     });
 
+  const needsKey = invitation.data?.role === TrusteeRole.Recipient;
+
   const onAcceptClick = () => {
     if (!user) return setStep('auth');
-    if (!keyring.data?.exists) return setStep('keyring');
+    // Chỉ người nhận thông tin cần khoá cá nhân (phần dành cho họ được niêm phong bằng khoá công khai đó).
+    if (needsKey && !keyring.data?.exists) return setStep('keyring');
     doAccept();
   };
 

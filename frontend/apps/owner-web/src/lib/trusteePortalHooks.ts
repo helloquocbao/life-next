@@ -3,10 +3,9 @@
  * Mỗi hook = một endpoint, kiểu đầy đủ từ OpenAPI (schema.d.ts).
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { unwrap, type ContactResponse, type EvidenceKind, type ReleaseReason } from '@deathnote/api';
+import { unwrap, type ContactResponse } from '@deathnote/api';
 import type { KeyringPayload } from '@deathnote/crypto';
 import { api } from '../config';
-import { uploadEvidence } from './upload';
 
 export const qk = {
   invitation: (token: string) => ['trustee', 'invitation', token] as const,
@@ -71,32 +70,6 @@ export function useRespondContact() {
   return useMutation({
     mutationFn: (body: { trusteeId: string; response: ContactResponse }) =>
       unwrap(api.POST('/api/app/trustee-portal/respond-contact', { body })),
-    onSuccess: invalidate,
-  });
-}
-
-export function useInitiateRelease() {
-  const invalidate = useInvalidateTrustee();
-  return useMutation({
-    mutationFn: (body: { trusteeId: string; reason: ReleaseReason; statement?: string }) =>
-      unwrap(api.POST('/api/app/trustee-portal/initiate-release', { body })),
-    onSuccess: invalidate,
-  });
-}
-
-export function useUploadEvidence() {
-  const invalidate = useInvalidateTrustee();
-  return useMutation({
-    mutationFn: (args: { requestId: string; kind: EvidenceKind; file: File }) => uploadEvidence(args.requestId, args.kind, args.file),
-    onSuccess: invalidate,
-  });
-}
-
-export function useResubmit() {
-  const invalidate = useInvalidateTrustee();
-  return useMutation({
-    mutationFn: (requestId: string) =>
-      unwrap(api.POST('/api/app/trustee-portal/resubmit/{requestId}', { params: { path: { requestId } } })),
     onSuccess: invalidate,
   });
 }

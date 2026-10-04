@@ -1,6 +1,6 @@
 /**
  * Hộp nhận — nơi người thân nhận phần owner để lại. Thứ tự hiển thị có chủ đích:
- *   0) Nhập passphrase → ghép khoá Shamir & giải mã NGAY TRÊN TRÌNH DUYỆT (xem lib/inbox.ts).
+ *   0) Nhập passphrase → mở phần được niêm phong riêng cho mình & giải mã NGAY TRÊN TRÌNH DUYỆT (xem lib/inbox.ts).
  *   a) Thư mở đầu — toàn màn hình, trước mọi thứ khác.
  *   b) Bản đồ tài sản (số lượng theo loại) → c) Checklist việc cần làm → d) Chi tiết hạng mục → e) Xuất PDF.
  *
@@ -38,7 +38,7 @@ export function InboxPage() {
         <Card>
           <Typography.Title level={3} style={{ marginTop: 0 }}>Mở hộp nhận</Typography.Title>
           <Typography.Paragraph>
-            Nhập passphrase khoá cá nhân bạn đã tạo khi nhận vai trò. Việc ghép khoá và giải mã diễn ra ngay trên
+            Nhập passphrase khoá cá nhân bạn đã tạo khi nhận vai trò. Việc mở khoá và giải mã diễn ra ngay trên
             trình duyệt này — PICO không đọc được nội dung.
           </Typography.Paragraph>
           <PassphraseForm

@@ -27,7 +27,7 @@ public class OwnerStatusDto
     public int ReminderSteps { get; set; }
     /// <summary>Mốc dự kiến người thân được báo (khi đang Missed).</summary>
     public DateTime? TrusteesNotifiedAt { get; set; }
-    /// <summary>Mốc hết thời gian ân hạn (khi đang Grace) — sau mốc này người thân có thể yêu cầu mở.</summary>
+    /// <summary>Mốc hết thời gian ân hạn (khi đang Grace) — hết mốc này mà owner vẫn không check-in thì thông tin tự động được bàn giao.</summary>
     public DateTime? GraceEndsAt { get; set; }
     public DateTime? PausedUntil { get; set; }
     public string? PauseReason { get; set; }
@@ -42,8 +42,6 @@ public class OwnerStatusDto
     public long VaultSizeBytes { get; set; }
     public int TrusteeCount { get; set; }
     public int ConfirmedTrusteeCount { get; set; }
-    public int? Threshold { get; set; }
-    public int? KeyHolderCount { get; set; }
     public bool KeysDistributed { get; set; }
     public bool KeysOutdated { get; set; }
     public DateTime? LastVaultUpdateAt { get; set; }

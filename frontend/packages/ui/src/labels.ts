@@ -4,7 +4,7 @@ import type { AuditActorType, CheckInChannel, ContactResponse, EvidenceKind, Lif
 export const lifecycleStateLabel: Record<LifecycleState, string> = {
   0: 'Bình thường',
   1: 'Quá hạn check-in',
-  2: 'Đang báo người thân',
+  2: 'Đang báo người nhắc nhở',
   3: 'Đang xác minh',
   4: 'Đang thẩm định',
   5: 'Chờ cuối',
@@ -20,16 +20,16 @@ export const checkInChannelLabel: Record<CheckInChannel, string> = {
   0: 'Ứng dụng', 1: 'Web', 2: 'Link email', 3: 'Link SMS',
 };
 
-// Nhãn "vai trò" viết lại bằng ngôn ngữ đời thường — người dùng không cần biết khái niệm
-// "mảnh khoá Shamir". Họ chỉ cần hiểu: ai được QUYỀT ĐỊNH mở, ai chỉ NHẬN thông tin.
+// Hai vai trò, viết bằng ngôn ngữ đời thường theo đúng trình tự xảy ra:
+//   1) Người nhắc nhở: được báo TRƯỚC khi owner ngừng bấm "Tôi vẫn ổn" — việc của họ là liên lạc và nhắc owner bấm nút.
+//   2) Người nhận thông tin: nếu hết thời gian ân hạn mà owner vẫn không bấm, tự động nhận phần owner cho phép.
 export const trusteeRoleLabel: Record<TrusteeRole, string> = {
-  0: 'Người cùng quyết định mở', 1: 'Người chỉ nhận thông tin', 2: 'Người xác nhận tình huống',
+  1: 'Người nhận thông tin', 2: 'Người nhắc nhở',
 };
 
 export const trusteeRoleHint: Record<TrusteeRole, string> = {
-  0: 'Cùng với những người khác, quyết định khi nào mở thông tin cho gia đình. Cần đủ số người đồng ý — không một mình ai tự ý mở được.',
-  1: 'Chỉ nhận đúng phần bạn để lại cho họ, sau khi thông tin đã được mở. Không tham gia quyết định.',
-  2: 'Có thể báo "không liên lạc được" và gửi giấy tờ chứng minh, nhưng không có quyền tự quyết định mở.',
+  1: 'Nếu người nhắc nhở đã báo mà bạn vẫn không bấm "Tôi vẫn ổn" sau thời gian ân hạn, người này tự động nhận toàn bộ phần bạn cho phép. Trước đó họ không biết gì.',
+  2: 'Khi bạn ngừng bấm "Tôi vẫn ổn", người này được báo trước tiên. Việc của họ là liên lạc và nhắc bạn bấm nút. Họ không nhận bất kỳ thông tin nào của bạn.',
 };
 
 export const trusteeStatusLabel: Record<TrusteeStatus, string> = { 0: 'Chờ xác nhận', 1: 'Đã xác nhận', 2: 'Không phản hồi', 3: 'Chưa gửi lời mời' };
@@ -84,7 +84,7 @@ export const auditActionLabel: Record<string, string> = {
   'vault.item_created': 'Thêm hạng mục',
   'vault.item_updated': 'Sửa hạng mục',
   'vault.item_deleted': 'Xoá hạng mục',
-  'vault.keys_distributed': 'Phân mảnh khoá & phân bổ',
+  'vault.keys_distributed': 'Chọn thông tin cho người nhận',
   'vault.abandoned': 'Từ bỏ két cũ, tạo két mới',
   'trustee.added': 'Thêm người được uỷ quyền (chưa gửi lời mời)',
   'trustee.invited': 'Mời người được uỷ quyền',
@@ -92,9 +92,11 @@ export const auditActionLabel: Record<string, string> = {
   'trustee.removed': 'Xoá người được uỷ quyền',
   'trustee.accepted': 'Người được uỷ quyền chấp nhận',
   'trustee.keyring_created': 'Người được uỷ quyền tạo khoá',
-  'trustee.contact_response': 'Phản hồi liên lạc',
+  'trustee.contact_response': 'Phản hồi của người nhắc nhở',
   'lifecycle.state_changed': 'Chuyển trạng thái',
   'lifecycle.reminder_sent': 'Gửi nhắc check-in',
+  'lifecycle.reminders_notified': 'Báo người nhắc nhở',
+  'lifecycle.auto_released': 'Tự động bàn giao (hết ân hạn)',
   'release.initiated': 'Khởi tạo yêu cầu mở',
   'release.consented': 'Đồng thuận mở',
   'release.evidence_uploaded': 'Nộp bằng chứng',

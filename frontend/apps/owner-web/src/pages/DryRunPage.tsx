@@ -1,6 +1,6 @@
 /**
  * DIỄN TẬP (DRY RUN) — tính năng tạo niềm tin mạnh nhất, đưa vào MVP.
- * Mô phỏng toàn bộ quy trình để owner thấy người thân sẽ nhận được gì. KHÔNG ai bị thông báo,
+ * Mô phỏng toàn bộ quy trình để owner thấy từng người nhận sẽ nhận được gì. KHÔNG ai bị thông báo,
  * trạng thái không thay đổi. Phần "mỗi người nhận được gì" được giải mã ngay trên trình duyệt của owner.
  */
 import { useMemo } from 'react';
@@ -41,7 +41,7 @@ export function DryRunPage() {
           }))} />
         </Card>
 
-        <UnlockGate reason="Mở khoá để xem trước chính xác từng người thân sẽ nhận được gì.">
+        <UnlockGate reason="Mở khoá để xem trước chính xác từng người nhận sẽ nhận được gì.">
           <RecipientPreview />
         </UnlockGate>
       </Space>
@@ -55,8 +55,8 @@ function RecipientPreview() {
   const allocation = useAllocation();
   const { items } = useDecryptedItems();
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const recipients = (trustees.data ?? []).filter((t) => t.status === TrusteeStatus.Confirmed);
-  if (!recipients.length) return <Card><Empty description="Chưa có người được uỷ quyền nào xác nhận lời mời." /></Card>;
+  const recipients = (trustees.data ?? []).filter((t) => t.role === TrusteeRole.Recipient && t.status === TrusteeStatus.Confirmed);
+  if (!recipients.length) return <Card><Empty description="Chưa có người nhận thông tin nào hoàn tất lời mời." /></Card>;
 
   return (
     <Row gutter={[16, 16]}>
@@ -65,8 +65,7 @@ function RecipientPreview() {
         const letter = allocation.data?.letters[t.id!];
         return (
           <Col xs={24} md={12} key={t.id}>
-            <Card title={t.displayName} extra={<Tag>{trusteeRoleLabel[t.role ?? 0]}</Tag>} style={{ height: '100%' }}>
-              {t.role === TrusteeRole.KeyHolder && <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Giữ 1 mảnh khoá — tham gia đồng thuận mở.</div>}
+            <Card title={t.displayName} extra={<Tag>{trusteeRoleLabel[t.role ?? TrusteeRole.Recipient]}</Tag>} style={{ height: '100%' }}>
               {letter
                 ? <Card size="small" style={{ background: colors.primarySoft, borderColor: colors.primarySoft, marginBottom: 12 }}><i style={{ whiteSpace: 'pre-wrap' }}>"{letter}"</i></Card>
                 : <div className="muted" style={{ marginBottom: 12 }}>Chưa có thư mở đầu.</div>}

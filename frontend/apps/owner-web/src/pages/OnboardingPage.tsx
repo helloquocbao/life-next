@@ -67,8 +67,8 @@ function StepPrivacy({ onNext }: { onNext: () => void }) {
         Chúng tôi chỉ giữ giúp bạn một hộp đã khoá — không ai mở được, kể cả nhân viên của chúng tôi.
       </Typography.Paragraph>
       <Typography.Paragraph type="secondary" style={{ fontSize: 16 }}>
-        Nếu một ngày bạn không thể tự lo liệu, hộp này chỉ được mở khi đủ số người thân bạn chọn cùng đồng ý.
-        Ở bất kỳ lúc nào trước đó, bạn chỉ cần chạm một nút là mọi thứ dừng lại ngay.
+        Nếu một ngày bạn không thể tự lo liệu và không còn bấm "Tôi vẫn ổn", hộp này chỉ được trao cho đúng những người bạn chọn,
+        sau khi người nhắc nhở đã có thời gian liên lạc với bạn. Ở bất kỳ lúc nào trước đó, bạn chỉ cần chạm một nút là mọi thứ dừng lại ngay.
       </Typography.Paragraph>
       <LegalNotice />
       <Button type="primary" size="large" block onClick={onNext} style={{ height: 52, fontSize: 17 }}>Bắt đầu</Button>
@@ -156,13 +156,13 @@ function StepScheduleIntro({ interval, grace, onChangeInterval, onChangeGrace, o
       <Typography.Title level={3} style={{ margin: 0 }}>Chúng tôi cần biết bạn vẫn ổn</Typography.Title>
       <Typography.Paragraph style={{ fontSize: 16 }}>
         Cứ sau một khoảng thời gian, chúng tôi sẽ nhắc bạn xác nhận "vẫn ổn" — chỉ một chạm. Nếu bạn
-        không phản hồi sau nhiều lần nhắc, chúng tôi mới bắt đầu báo cho người thân.
+        không phản hồi sau nhiều lần nhắc, chúng tôi mới bắt đầu báo cho người nhắc nhở bạn đã chọn.
       </Typography.Paragraph>
       <Radio.Group value={interval} onChange={(e) => onChangeInterval(e.target.value)} optionType="button" buttonStyle="solid" size="large"
         style={{ width: '100%', display: 'flex' }}
         options={[7, 14, 30, 90].map((d) => ({ value: d, label: `${d} ngày`, style: { flex: 1, textAlign: 'center' as const, paddingInline: 2, minWidth: 0, fontSize: 15, whiteSpace: 'nowrap' as const } }))} />
       <div>
-        <div style={{ marginBottom: 8 }}>Thời gian ân hạn trước khi người thân có thể yêu cầu mở: <b>{grace} ngày</b></div>
+        <div style={{ marginBottom: 8 }}>Số ngày người nhắc nhở có để liên lạc với bạn trước khi thông tin được gửi đi: <b>{grace} ngày</b></div>
         <Slider min={7} max={30} value={grace} onChange={onChangeGrace} />
       </div>
       <ErrorAlert error={error} />
@@ -171,7 +171,7 @@ function StepScheduleIntro({ interval, grace, onChangeInterval, onChangeGrace, o
   );
 }
 
-/** Bước 4: giới thiệu vai trò người thân + thêm 1 người (chưa gửi lời mời, có thể để sau). */
+/** Bước 4: giới thiệu hai vai trò (người nhắc nhở, người nhận thông tin) + thêm 1 người (chưa gửi lời mời, có thể để sau). */
 function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
   const save = useSaveTrustee();
   const { message } = App.useApp();
@@ -186,21 +186,20 @@ function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
   if (sent) {
     return (
       <Result status="success" title="Đã thêm!"
-        subTitle={'Người này CHƯA nhận được thông báo gì — hệ thống chỉ tự động gửi lời mời khi bạn thật sự bỏ lỡ xác nhận "vẫn ổn". Muốn gửi sớm hơn, vào mục Người nhận.'}
+        subTitle={'Người này CHƯA nhận được thông báo gì. Người nhắc nhở sẽ được mời tự động khi bạn bỏ lỡ xác nhận "vẫn ổn"; người nhận thông tin cần được mời sớm (mục Người thân) để họ tạo khoá cá nhân.'}
         extra={<Button type="primary" size="large" onClick={onDone} style={{ height: 52, fontSize: 17, paddingInline: 32 }}>Tiếp tục</Button>} />
     );
   }
 
   return (
-    <Form layout="vertical" onFinish={onFinish} requiredMark={false} initialValues={{ role: TrusteeRole.KeyHolder }} size="large">
+    <Form layout="vertical" onFinish={onFinish} requiredMark={false} initialValues={{ role: TrusteeRole.Reminder }} size="large">
       <Typography.Title level={3} style={{ marginTop: 0 }}>Ai sẽ nhận thông tin của bạn?</Typography.Title>
       <Typography.Paragraph style={{ fontSize: 16 }}>
-        Bạn chọn những người thân tin cậy. Họ KHÔNG biết gì về việc này cho tới khi thật sự có chuyện —
-        hệ thống chỉ tự động báo cho họ khi bạn bỏ lỡ xác nhận "vẫn ổn". Việc mở luôn cần nhiều người
-        cùng đồng ý, không một ai tự quyết định được một mình.
+        Bạn chọn những người thân tin cậy với hai việc khác nhau: <b>người nhắc nhở</b> được báo trước để nhắc bạn bấm "Tôi vẫn ổn",
+        và <b>người nhận thông tin</b> tự động nhận phần bạn cho phép nếu bạn vẫn không bấm sau thời gian chờ.
       </Typography.Paragraph>
       <Typography.Paragraph type="secondary" style={{ fontSize: 14 }}>
-        Thêm một người ngay bây giờ để hình dung rõ hơn — hoặc bấm "Để sau" và thêm họ lúc khác trong mục Người nhận.
+        Thêm một người ngay bây giờ để hình dung rõ hơn — hoặc bấm "Để sau" và thêm họ lúc khác trong mục Người thân.
       </Typography.Paragraph>
       <Form.Item name="displayName" label="Họ tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}><Input /></Form.Item>
       <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Email chưa hợp lệ' }]}><Input /></Form.Item>
@@ -208,7 +207,7 @@ function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
       <Form.Item name="role" label="Vai trò của họ">
         <Radio.Group>
           <Space direction="vertical" size="middle">
-            {[TrusteeRole.KeyHolder, TrusteeRole.ContentOnly].map((r) => (
+            {[TrusteeRole.Reminder, TrusteeRole.Recipient].map((r) => (
               <Card key={r} size="small" style={{ width: '100%' }}>
                 <Radio value={r}>
                   <b>{trusteeRoleLabel[r]}</b>
@@ -232,7 +231,7 @@ function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
 function StepWhatHappens({ interval, grace, onDone }: { interval: number; grace: number; onDone: () => void }) {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>Nếu có chuyện xảy ra với bạn</Typography.Title>
+      <Typography.Title level={3} style={{ margin: 0 }}>Nếu bạn không còn bấm nút</Typography.Title>
       <Typography.Paragraph style={{ fontSize: 16 }}>
         Đây là toàn bộ những gì sẽ diễn ra — từng bước một, không có bước nào bị bỏ qua.
       </Typography.Paragraph>
@@ -240,9 +239,8 @@ function StepWhatHappens({ interval, grace, onDone }: { interval: number; grace:
         <Timeline style={{ marginTop: 4, marginBottom: -16 }} items={[
           { color: 'green', children: `Ngày ${interval}: đến hạn xác nhận "vẫn ổn".` },
           { color: 'gold', children: 'Vài ngày sau: chúng tôi nhắc bạn qua thông báo, email, tin nhắn — mỗi tin có nút "Tôi vẫn ổn" bấm là xong.' },
-          { color: 'orange', children: 'Nếu vẫn không có phản hồi: người thân bạn chọn được báo "hãy liên lạc với bạn". Họ CHƯA xem được gì.' },
-          { color: 'volcano', children: `Sau ${grace} ngày chờ thêm: người thân mới có thể xin mở thông tin — cần đủ người đồng ý và nộp bằng chứng.` },
-          { color: 'red', children: 'Đội vận hành thẩm định hồ sơ (2 người độc lập duyệt), rồi chờ thêm 48–72 giờ trước khi bàn giao.' },
+          { color: 'orange', children: 'Nếu vẫn không có phản hồi: người nhắc nhở bạn chọn được báo "hãy liên lạc với bạn, nhắc bạn bấm Tôi vẫn ổn". Họ KHÔNG xem được gì.' },
+          { color: 'red', children: `Sau ${grace} ngày chờ thêm mà bạn vẫn không bấm: hệ thống tự động gửi cho người nhận thông tin đúng phần bạn đã chọn cho họ.` },
           { color: 'gray', children: 'Ở BẤT KỲ lúc nào trong toàn bộ quá trình này, bạn chỉ cần xác nhận "vẫn ổn" là mọi thứ dừng lại ngay lập tức.' },
         ]} />
       </Card>

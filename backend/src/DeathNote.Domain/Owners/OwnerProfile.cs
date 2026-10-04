@@ -222,6 +222,20 @@ public class OwnerProfile : FullAuditedAggregateRoot<Guid>
         ChangeState(LifecycleState.Grace, now);
     }
 
+    /// <summary>
+    /// Cổng THỜI GIAN duy nhất để bàn giao: đang Grace và đã hết thời gian ân hạn mà owner vẫn không check-in.
+    /// Không còn đồng thuận m-of-n hay thẩm định — hết hạn là tự động bàn giao cho người nhận.
+    /// </summary>
+    public bool ShouldReleaseAutomatically(DateTime now, LifecyclePolicy policy) =>
+        State == LifecycleState.Grace && GraceEndsAt(policy) is { } end && now >= end;
+
+    /// <summary>Grace → Released (tự động, theo thời gian). Không thể đảo ngược — check-in sau đó bị từ chối.</summary>
+    public void ReleaseAutomatically(DateTime now)
+    {
+        EnsureState(LifecycleState.Grace);
+        ChangeState(LifecycleState.Released, now);
+    }
+
     /// <summary>Mốc mà từ đó trustee được phép khởi tạo yêu cầu mở (hết thời gian ân hạn).</summary>
     public DateTime? GraceEndsAt(LifecyclePolicy policy) =>
         GraceStartedAt.HasValue ? GraceStartedAt.Value + policy.Days(GraceDays) : null;

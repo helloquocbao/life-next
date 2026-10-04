@@ -26,9 +26,9 @@ namespace DeathNote;
 
 /// <summary>
 /// TEST TÍCH HỢP TRỌN VÒNG ĐỜI trên PostgreSQL thật:
-/// onboarding → mời 3 trustee → phân mảnh 2-of-3 → im lặng → nhắc 4 vòng → Grace → chờ hết ân hạn
-/// → trustee khởi tạo + nộp bằng chứng → 2 người đồng thuận (khác IP) → quy tắc 4 mắt → chờ cuối
-/// → phát hành → trustee thứ 3 mở hộp nhận; kiểm tra audit log toàn vẹn và bất biến.
+/// onboarding → thêm người nhắc nhở + người nhận → người nhận tạo khoá, owner niêm phong phần dành cho họ → im lặng
+/// → nhắc owner 4 vòng → Grace (chỉ người nhắc nhở được báo) → hết ân hạn → TỰ ĐỘNG bàn giao → người nhận mở hộp nhận;
+/// kiểm tra audit log toàn vẹn và bất biến. Kèm kịch bản owner check-in giữa ân hạn thì huỷ toàn bộ.
 /// (Phần mật mã phía client đã được kiểm thử riêng trong frontend/packages/crypto.)
 /// </summary>
 public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModule>
@@ -69,20 +69,18 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
     private Task Tick() => InUow(async () => await S<LifecycleManager>().ProcessOwnerAsync(await Owner()));
 
     [Fact]
-    public async Task Full_lifecycle_from_onboarding_to_release()
+    public async Task Full_lifecycle_from_onboarding_to_automatic_release()
     {
         var notifier = S<CapturingNotificationSender>();
         var policy = S<LifecyclePolicy>();
+        string TokenFor(string email) => Uri.UnescapeDataString(Regex.Match(
+            notifier.Sent.Last(m => m.Email == email && m.Subject.Contains("người được uỷ quyền")).HtmlBody, @"token=([^""&]+)").Groups[1].Value);
 
-        // ---------------- 1. Owner thiết lập ----------------
-        // Owner thêm 3 người thân nhưng KHÔNG muốn họ biết trước — hệ thống chỉ gửi lời mời thật khi
-        // owner thật sự bỏ lỡ xác nhận (Missed), xem TrusteeAppService.CreateAsync/LifecycleManager.
-        var tokens = new List<string>();
-        var trusteeIds = new List<Guid>();
+        // ---------------- 1. Owner thiết lập: 2 người nhắc nhở + 1 người nhận thông tin ----------------
+        Guid binhId, chauId, dungId;
         using (As(_ownerId, "an"))
         {
-            var owner = S<IOwnerAppService>();
-            (await owner.CompleteOnboardingAsync(new CompleteOnboardingInput { DisplayName = "Nguyễn Văn An", CheckInIntervalDays = 7, GraceDays = 7 }))
+            (await S<IOwnerAppService>().CompleteOnboardingAsync(new CompleteOnboardingInput { DisplayName = "Nguyễn Văn An", CheckInIntervalDays = 7, GraceDays = 7 }))
                 .State.ShouldBe(LifecycleState.Active);
 
             var vault = S<IVaultAppService>();
@@ -95,162 +93,135 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             await vault.CreateItemAsync(new SaveVaultItemInput { Ciphertext = "ciphertext-insurance", WrappedItemKey = "wik-2" });
 
             var trustees = S<ITrusteeAppService>();
-            foreach (var (name, i) in new[] { "Bình", "Châu", "Dũng" }.Select((n, i) => (n, i)))
-            {
-                var t = await trustees.CreateAsync(new SaveTrusteeInput { DisplayName = name, Email = $"t{i}@test.local", Role = TrusteeRole.KeyHolder });
-                t.Status.ShouldBe(TrusteeStatus.NotInvitedYet);
-                trusteeIds.Add(t.Id);
-            }
-        }
-        // Chưa gửi lời mời nào — chưa đến hạn.
-        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(0);
+            var binh = await trustees.CreateAsync(new SaveTrusteeInput { DisplayName = "Bình", Email = "binh@test.local", Role = TrusteeRole.Reminder });
+            var chau = await trustees.CreateAsync(new SaveTrusteeInput { DisplayName = "Châu", Email = "chau@test.local", Role = TrusteeRole.Reminder });
+            var dung = await trustees.CreateAsync(new SaveTrusteeInput { DisplayName = "Dũng", Email = "dung@test.local", Role = TrusteeRole.Recipient });
+            (binhId, chauId, dungId) = (binh.Id, chau.Id, dung.Id);
+            new[] { binh, chau, dung }.ShouldAllBe(t => t.Status == TrusteeStatus.NotInvitedYet);
 
-        // ---------------- 2. Owner im lặng → Missed: hệ thống TỰ ĐỘNG gửi lời mời lúc này ----------------
+            // Người nhận phải được mời SỚM (để tạo khoá trước): owner chủ động mời. Người nhắc nhở thì chưa cần.
+            await trustees.ResendInvitationAsync(dungId);
+        }
+        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(1);
+
+        // ---------------- 2. Người nhận tạo khoá + chấp nhận; owner niêm phong phần dành cho họ ----------------
+        using (As(_trusteeUsers[2], "dung"))
+        {
+            var portal = S<ITrusteePortalAppService>();
+            await portal.CreateKeyringAsync(new CreateKeyringInput { PublicKey = "pk-dung", EncryptedPrivateKey = "esk-dung", KdfSalt = "c2FsdA==", KdfOpsLimit = 3, KdfMemLimit = 64 << 20 });
+            (await portal.AcceptInvitationAsync(new AcceptInvitationInput { Token = TokenFor("dung@test.local") })).Phase.ShouldBe(TrusteePhase.Normal);
+        }
+        using (As(_ownerId, "an"))
+        {
+            var status = await S<IOwnerAppService>().GetStatusAsync();
+            status.KeysOutdated.ShouldBeFalse(); // chưa từng phân bổ nên chưa "lỗi thời"
+
+            // Chỉ người nhận thông tin đã sẵn sàng mới nhận được Grant: người nhắc nhở bị từ chối.
+            var bad = await Should.ThrowAsync<BusinessException>(() => S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
+            {
+                EncryptedAllocation = "enc-allocation",
+                Grants = [new SealedGrantInput { TrusteeId = binhId, SealedPayload = "grant-for-binh", ItemCount = 1 }]
+            }));
+            bad.Code.ShouldBe(DeathNoteErrorCodes.InvalidShareDeliveries);
+
+            var vault = await S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
+            {
+                EncryptedAllocation = "enc-allocation",
+                Grants = [new SealedGrantInput { TrusteeId = dungId, SealedPayload = "grant-for-dung", ItemCount = 2 }]
+            });
+            vault.KeyVersion.ShouldBe(1);
+            vault.KeysOutdated.ShouldBeFalse();
+            (await S<ITrusteeAppService>().GetListAsync()).Single(t => t.Id == dungId).HasCurrentGrant.ShouldBeTrue();
+        }
+
+        // ---------------- 3. Owner im lặng → Missed: chỉ nhắc OWNER; tự mời người nhắc nhở ----------------
         FakeClock.Advance(TimeSpan.FromDays(7.1));
         await Tick();
         (await Owner()).State.ShouldBe(LifecycleState.Missed);
-        foreach (var m in notifier.Sent.Where(m => m.Subject.Contains("người được uỷ quyền")))
-            tokens.Add(Uri.UnescapeDataString(Regex.Match(m.HtmlBody, @"token=([^""&]+)").Groups[1].Value));
-        tokens.Count.ShouldBe(3);
+        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(3); // +2 người nhắc nhở, KHÔNG mời thêm người nhận
 
-        // ---------------- 3. Trustee chấp nhận + tạo khoá ----------------
-        for (var i = 0; i < 3; i++)
+        foreach (var (user, name, email) in new[] { (_trusteeUsers[0], "binh", "binh@test.local"), (_trusteeUsers[1], "chau", "chau@test.local") })
         {
-            using (As(_trusteeUsers[i], $"trustee{i}"))
+            using (As(user, name))
             {
-                var portal = S<ITrusteePortalAppService>();
-                await portal.CreateKeyringAsync(new CreateKeyringInput { PublicKey = $"pk-{i}", EncryptedPrivateKey = $"esk-{i}", KdfSalt = "c2FsdA==", KdfOpsLimit = 3, KdfMemLimit = 64 << 20 });
-                (await portal.AcceptInvitationAsync(new AcceptInvitationInput { Token = tokens[i] })).Phase.ShouldBe(TrusteePhase.Normal);
+                // Người nhắc nhở không cần khoá cá nhân.
+                (await S<ITrusteePortalAppService>().AcceptInvitationAsync(new AcceptInvitationInput { Token = TokenFor(email) }))
+                    .Phase.ShouldBe(TrusteePhase.Normal);
             }
         }
 
-        // ---------------- 4. Owner phân mảnh 2-of-3 (vẫn còn cơ hội trong lúc Missed, trước khi hết vòng nhắc) ----------------
-        using (As(_ownerId, "an"))
-        {
-            var vault = await S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
-            {
-                Threshold = 2,
-                WrappedReleaseKey = "wrapped-release-key",
-                EncryptedAllocation = "enc-allocation",
-                Shares = trusteeIds.Select((id, i) => new SealedShareInput { TrusteeId = id, SealedShare = $"share-for-{i}" }).ToList(),
-                Grants = [new SealedGrantInput { TrusteeId = trusteeIds[2], SealedPayload = "grant-for-dung", ItemCount = 2 }]
-            });
-            vault.Threshold.ShouldBe(2);
-            vault.KeyHolderCount.ShouldBe(3);
-            (await S<IOwnerAppService>().GetStatusAsync()).Readiness.Score.ShouldBeGreaterThan(50);
-        }
-
-        // ---------------- 5. 4 vòng nhắc còn lại → Grace ----------------
+        // ---------------- 4. Các vòng nhắc → Grace: CHỈ người nhắc nhở được báo ----------------
         for (var i = 0; i < policy.ReminderSteps; i++)
         {
             FakeClock.Advance(policy.ReminderInterval + TimeSpan.FromMinutes(1));
             await Tick();
         }
         (await Owner()).State.ShouldBe(LifecycleState.Grace);
-        notifier.Sent.Count(m => m.Subject.Contains("chưa check-in")).ShouldBe(3); // cả 3 trustee được báo
+        var graceAlerts = notifier.Sent.Where(m => m.Subject.Contains("nhờ bạn liên lạc")).ToList();
+        graceAlerts.Select(m => m.Email).ShouldBe(["binh@test.local", "chau@test.local"], ignoreOrder: true);
 
-        // Trong thời gian ân hạn: chưa được khởi tạo yêu cầu mở (cổng thời gian).
-        using (As(_trusteeUsers[0], "trustee0"))
-        {
-            var ex = await Should.ThrowAsync<BusinessException>(() => S<ITrusteePortalAppService>().InitiateReleaseAsync(
-                new InitiateReleaseInput { TrusteeId = trusteeIds[0], Reason = ReleaseReason.Deceased }));
-            ex.Code.ShouldBe(DeathNoteErrorCodes.ReleaseNotAllowedInState);
-        }
-
-        // ---------------- 5. Hết ân hạn → trustee khởi tạo + nộp bằng chứng ----------------
-        FakeClock.Advance(TimeSpan.FromDays(7.1));
-        Guid requestId;
-        using (As(_trusteeUsers[0], "trustee0"))
+        using (As(_trusteeUsers[0], "binh"))
         {
             var portal = S<ITrusteePortalAppService>();
-            var progress = await portal.InitiateReleaseAsync(new InitiateReleaseInput { TrusteeId = trusteeIds[0], Reason = ReleaseReason.Deceased, Statement = "Tôi xác nhận…" });
-            requestId = progress.Id;
-            progress.RequiredConsents.ShouldBe(2);
-            await portal.UploadEvidenceAsync(requestId, EvidenceKind.DeathCertificate,
-                new RemoteStreamContent(new MemoryStream("PDF"u8.ToArray()), "giay-chung-tu.pdf", "application/pdf"));
+            var a = (await portal.GetAssignmentsAsync()).Single();
+            a.Phase.ShouldBe(TrusteePhase.Alert);
+            a.ReleaseAt.ShouldNotBeNull();
+            await portal.RespondContactAsync(new ContactResponseInput { TrusteeId = binhId, Response = ContactResponse.CannotReach });
+            (await portal.GetAssignmentsAsync()).Single().MyContactResponse.ShouldBe(ContactResponse.CannotReach);
+            // Người nhắc nhở không có hộp nhận.
+            (await Should.ThrowAsync<BusinessException>(() => portal.GetInboxAsync(binhId))).Code.ShouldBe(DeathNoteErrorCodes.NotATrustee);
         }
-        (await Owner()).State.ShouldBe(LifecycleState.Verifying);
-        notifier.Sent.ShouldContain(m => m.Subject.StartsWith("Cảnh báo") && m.Channels == NotificationChannels.All);
+        using (As(_trusteeUsers[2], "dung"))
+        {
+            var portal = S<ITrusteePortalAppService>();
+            // Người nhận KHÔNG được báo gì trong lúc owner im lặng, và chưa mở được hộp nhận.
+            (await portal.GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Normal);
+            (await Should.ThrowAsync<BusinessException>(() => portal.GetInboxAsync(dungId))).Code.ShouldBe(DeathNoteErrorCodes.ReleaseNotYetReleased);
+            (await Should.ThrowAsync<BusinessException>(() => portal.RespondContactAsync(new ContactResponseInput { TrusteeId = dungId, Response = ContactResponse.CanReach })))
+                .Code.ShouldBe(DeathNoteErrorCodes.NotATrustee);
+        }
+        notifier.Sent.ShouldNotContain(m => m.Email == "dung@test.local" && m.Subject.Contains("sẵn sàng"));
 
-        // ---------------- 6. Đồng thuận m-of-n (chống trùng IP) ----------------
-        await ConsentAs(0, trusteeIds, requestId, "10.0.0.1");
-        await ConsentAs(1, trusteeIds, requestId, "10.0.0.1"); // cùng IP → chỉ tính 1 phiếu
-        (await Owner()).State.ShouldBe(LifecycleState.Verifying);
-        using (As(_trusteeUsers[1], "trustee1"))
-        {
-            (await Should.ThrowAsync<BusinessException>(() => ConsentAs(1, trusteeIds, requestId, "10.0.0.2"))).Code.ShouldBe(DeathNoteErrorCodes.AlreadyConsented);
-        }
-        await ConsentAs(2, trusteeIds, requestId, "10.0.0.3");
-        (await Owner()).State.ShouldBe(LifecycleState.Review);
+        // Giữa ân hạn vẫn chưa bàn giao.
+        FakeClock.Advance(TimeSpan.FromDays(3));
+        await Tick();
+        (await Owner()).State.ShouldBe(LifecycleState.Grace);
 
-        // ---------------- 7. Thẩm định 4 mắt ----------------
-        using (As(_superAdminId, "admin", DeathNoteConsts.Roles.SuperAdmin))
-        {
-            var ex = await Should.ThrowAsync<BusinessException>(() => S<IReleaseReviewAppService>().VoteAsync(requestId, new CastVoteInput { Decision = ReviewDecision.Approve }));
-            ex.Code.ShouldBe(DeathNoteErrorCodes.SuperAdminCannotApprove);
-        }
-        using (As(_approverId, "approver", DeathNoteConsts.Roles.Approver))
-        {
-            // Approver không được bỏ phiếu 1
-            await Should.ThrowAsync<AbpAuthorizationException>(() => S<IReleaseReviewAppService>().VoteAsync(requestId, new CastVoteInput { Decision = ReviewDecision.Approve }));
-        }
-        using (As(_reviewerId, "reviewer", DeathNoteConsts.Roles.Reviewer))
-        {
-            var review = S<IReleaseReviewAppService>();
-            var c = await review.GetAsync(requestId);
-            c.MyVoteStage.ShouldBe(1);
-            c.Summary.Gates.Select(g => g.Code).ShouldBe(["time", "human", "evidence", "crypto"]);
-            c.Summary.Gates.ShouldAllBe(g => g.Passed);
-            c.RiskFlags.ShouldNotContain(f => f.Code == "NO_EVIDENCE"); // đã nộp giấy chứng tử
-            c.RiskFlags.ShouldContain(f => f.Code == "SAME_IP" && f.Severity == RiskSeverity.High); // 2 trustee cùng IP bị gắn cờ
-            c.EffectiveConsents.ShouldBe(2);                                                         // 3 phiếu nhưng chỉ tính 2 IP khác nhau
-            (await review.VoteAsync(requestId, new CastVoteInput { Decision = ReviewDecision.Approve })).Status.ShouldBe(ReleaseStatus.AwaitingSecondReview);
-            await Should.ThrowAsync<Exception>(() => review.VoteAsync(requestId, new CastVoteInput { Decision = ReviewDecision.Approve }));
-            (await review.GetEvidenceFileAsync(c.Evidence[0].Id)).FileName.ShouldBe("giay-chung-tu.pdf");
-        }
-        using (As(_approverId, "approver", DeathNoteConsts.Roles.Approver))
-        {
-            var c = await S<IReleaseReviewAppService>().VoteAsync(requestId, new CastVoteInput { Decision = ReviewDecision.Approve });
-            c.Status.ShouldBe(ReleaseStatus.FinalWait);
-        }
-        (await Owner()).State.ShouldBe(LifecycleState.FinalWait);
-        notifier.Sent.ShouldContain(m => m.Subject.StartsWith("CẢNH BÁO CUỐI"));
-
-        // Trustee chưa mở được hộp nhận trong thời gian chờ cuối.
-        using (As(_trusteeUsers[2], "trustee2"))
-        {
-            (await Should.ThrowAsync<BusinessException>(() => S<ITrusteePortalAppService>().GetInboxAsync(trusteeIds[2])))
-                .Code.ShouldBe(DeathNoteErrorCodes.ReleaseNotYetReleased);
-        }
-
-        // ---------------- 8. Hết chờ cuối → phát hành ----------------
-        FakeClock.Advance(policy.FinalWait + TimeSpan.FromMinutes(1));
-        await InUow(async () =>
-        {
-            var releases = S<IRepository<ReleaseRequest, Guid>>();
-            var r = await releases.GetAsync(requestId);
-            r.IsFinalWaitOver(FakeClock.Current).ShouldBeTrue();
-            await S<ReleaseManager>().CompleteAsync(r);
-        });
+        // ---------------- 5. Hết ân hạn mà owner vẫn im lặng → TỰ ĐỘNG bàn giao ----------------
+        FakeClock.Advance(TimeSpan.FromDays(4.1));
+        await Tick();
         (await Owner()).State.ShouldBe(LifecycleState.Released);
+        notifier.Sent.ShouldContain(m => m.Email == "dung@test.local" && m.Subject.Contains("sẵn sàng"));
+        notifier.Sent.ShouldNotContain(m => (m.Email == "binh@test.local" || m.Email == "chau@test.local") && m.Subject.Contains("sẵn sàng"));
 
-        // ---------------- 9. Trustee thứ 3 mở hộp nhận ----------------
-        using (As(_trusteeUsers[2], "trustee2"))
+        using (As(_trusteeUsers[2], "dung"))
         {
             var portal = S<ITrusteePortalAppService>();
-            var inbox = await portal.GetInboxAsync(trusteeIds[2]);
-            inbox.Threshold.ShouldBe(2);
-            inbox.SealedShares.Count.ShouldBeGreaterThanOrEqualTo(2); // mảnh riêng + mảnh các trustee khác chuyển
-            inbox.SealedShares.ShouldContain("share-for-2");
+            var inbox = await portal.GetInboxAsync(dungId);
             inbox.SealedGrant.ShouldBe("grant-for-dung");
+            inbox.GrantItemCount.ShouldBe(2);
             (await portal.GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Released);
         }
+        using (As(_trusteeUsers[0], "binh"))
+        {
+            var portal = S<ITrusteePortalAppService>();
+            (await portal.GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Released);
+            (await Should.ThrowAsync<BusinessException>(() => portal.GetInboxAsync(binhId))).Code.ShouldBe(DeathNoteErrorCodes.NotATrustee);
+        }
 
-        // ---------------- 10. Audit log: toàn vẹn + bất biến ----------------
+        // Không thể đảo ngược: owner không check-in được nữa và không đổi được phần đã chia.
+        using (As(_ownerId, "an"))
+        {
+            (await Should.ThrowAsync<BusinessException>(() => S<IOwnerAppService>().CheckInAsync(new CheckInInput()))).Code.ShouldBe(DeathNoteErrorCodes.AlreadyReleased);
+            (await Should.ThrowAsync<BusinessException>(() => S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput())))
+                .Code.ShouldBe(DeathNoteErrorCodes.AlreadyReleased);
+        }
+
+        // ---------------- 6. Audit log: toàn vẹn + bất biến ----------------
         await InUow(async () =>
         {
             var (total, broken) = await S<AuditTrailManager>().VerifyChainAsync();
-            total.ShouldBeGreaterThan(20);
+            total.ShouldBeGreaterThan(15);
             broken.ShouldBeNull();
         });
         await InUow(async () =>
@@ -259,6 +230,53 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             var ex = await Should.ThrowAsync<Exception>(() => db.Database.ExecuteSqlRawAsync("DELETE FROM \"DnAuditEvents\""));
             ex.Message.ShouldContain("append-only");
         });
+    }
+
+    [Fact]
+    public async Task Owner_check_in_during_grace_cancels_everything_and_nobody_gets_the_data()
+    {
+        var notifier = S<CapturingNotificationSender>();
+        var policy = S<LifecyclePolicy>();
+        var ownerId = Guid.NewGuid();
+        var reminderUser = Guid.NewGuid();
+        var reminderTrusteeId = Guid.Empty;
+        using (As(ownerId, "hoa"))
+        {
+            await S<IOwnerAppService>().CompleteOnboardingAsync(new CompleteOnboardingInput { DisplayName = "Hoa", CheckInIntervalDays = 7, GraceDays = 7 });
+            var t = await S<ITrusteeAppService>().CreateAsync(new SaveTrusteeInput { DisplayName = "Lan", Email = "lan@test.local", Role = TrusteeRole.Reminder });
+            reminderTrusteeId = t.Id;
+        }
+        Task TickHoa() => InUow(async () => await S<LifecycleManager>().ProcessOwnerAsync(await S<IRepository<OwnerProfile, Guid>>().GetAsync(ownerId)));
+
+        FakeClock.Advance(TimeSpan.FromDays(7.1));
+        await TickHoa();
+        var token = Uri.UnescapeDataString(Regex.Match(notifier.Sent.Last(m => m.Email == "lan@test.local").HtmlBody, @"token=([^""&]+)").Groups[1].Value);
+        using (As(reminderUser, "lan"))
+            await S<ITrusteePortalAppService>().AcceptInvitationAsync(new AcceptInvitationInput { Token = token });
+
+        for (var i = 0; i < policy.ReminderSteps; i++)
+        {
+            FakeClock.Advance(policy.ReminderInterval + TimeSpan.FromMinutes(1));
+            await TickHoa();
+        }
+        (await S<IRepository<OwnerProfile, Guid>>().GetAsync(ownerId)).State.ShouldBe(LifecycleState.Grace);
+
+        // Owner bấm "Tôi vẫn ổn" khi còn ân hạn → quay về Active, người nhắc nhở được báo huỷ.
+        using (As(ownerId, "hoa"))
+        {
+            var result = await S<IOwnerAppService>().CheckInAsync(new CheckInInput());
+            result.WasVeto.ShouldBeTrue();
+            result.PreviousState.ShouldBe(LifecycleState.Grace);
+        }
+        notifier.Sent.ShouldContain(m => m.Email == "lan@test.local" && m.Subject.Contains("đã xác nhận an toàn"));
+
+        // Dù thời gian có trôi qua bao lâu, không còn gì để bàn giao.
+        FakeClock.Advance(TimeSpan.FromDays(3));
+        await TickHoa();
+        (await S<IRepository<OwnerProfile, Guid>>().GetAsync(ownerId)).State.ShouldBe(LifecycleState.Active);
+        using (As(reminderUser, "lan"))
+            (await S<ITrusteePortalAppService>().GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Normal);
+        _ = reminderTrusteeId;
     }
 
     [Fact]
@@ -315,7 +333,7 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
                 PassphraseWrappedKey = "wrapped-old", RecoveryWrappedKey = "recovery-old", RecoverySalt = "cnNhbHQ="
             });
             var item = await S<IVaultAppService>().CreateItemAsync(new SaveVaultItemInput { Ciphertext = "old-secret", WrappedItemKey = "wik" });
-            var trustee = await S<ITrusteeAppService>().CreateAsync(new SaveTrusteeInput { DisplayName = "Dũng", Email = "d@test.local", Role = TrusteeRole.KeyHolder });
+            var trustee = await S<ITrusteeAppService>().CreateAsync(new SaveTrusteeInput { DisplayName = "Dũng", Email = "d@test.local", Role = TrusteeRole.Recipient });
             trusteeId = trustee.Id;
 
             // Quên cả 2 chìa → từ bỏ két.
@@ -345,23 +363,6 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
         {
             var ex = await Should.ThrowAsync<BusinessException>(() => S<IVaultAppService>().AbandonAsync());
             ex.Code.ShouldBe(DeathNoteErrorCodes.VaultNotInitialized);
-        }
-    }
-
-    /// <summary>Trustee đồng thuận từ một "thiết bị" (IP) và chuyển mảnh khoá cho 2 người còn lại.</summary>
-    private async Task ConsentAs(int i, List<Guid> trusteeIds, Guid requestId, string ip)
-    {
-        FakeRequestContext.CurrentIp = ip;
-        using (As(_trusteeUsers[i], $"trustee{i}"))
-        {
-            var portal = S<ITrusteePortalAppService>();
-            var material = await portal.GetConsentMaterialAsync(requestId);
-            material.MySealedShare.ShouldBe($"share-for-{i}");
-            material.Recipients.Count.ShouldBe(2);
-            await portal.ConsentAsync(requestId, new ConsentInput
-            {
-                Deliveries = material.Recipients.Select(r => new ShareDeliveryInput { ToTrusteeId = r.TrusteeId, SealedShare = $"resealed-{i}-to-{r.TrusteeId}" }).ToList()
-            });
         }
     }
 }

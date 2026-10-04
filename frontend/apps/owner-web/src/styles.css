@@ -161,3 +161,15 @@ h1, h2, h3, h4, h5,
 .app-more-item .anticon { font-size: 18px; color: #5E5B54; }
 .app-more-item.danger, .app-more-item.danger .anticon { color: #A31E15; }
 .app-tab .ant-badge { display: flex; line-height: 1; }
+
+/* ── Chọn vai trò người được giao (modal Thêm người) ─────────────────────────────────────────── */
+.role-option.ant-radio-wrapper { display: flex; align-items: flex-start; width: 100%; margin: 0; padding: 12px 14px; border: 1px solid #EAE5D9; border-radius: 12px; }
+.role-option.ant-radio-wrapper > .ant-radio { margin-top: 3px; }
+.role-option.ant-radio-wrapper > span:not(.ant-radio) { flex: 1; min-width: 0; }
+.role-option.ant-radio-wrapper-checked { border-color: #1F5F5B; background: #EDF1EF; }
+.role-option-body { display: flex; gap: 10px; }
+.role-option-icon { font-size: 18px; margin-top: 2px; }
+.role-option-step { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #7A776F; }
+.role-option-title { display: block; font-size: 16px; }
+.role-option-hint { display: block; font-size: 13px; line-height: 1.5; margin-top: 2px; }
+.role-timeline { background: #F7F5F0; border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.65; }

@@ -14,8 +14,9 @@ namespace DeathNote.Lifecycle;
 /// <summary>
 /// "Nhịp tim" của hệ thống — chạy định kỳ (mặc định 60 giây) và:
 /// <list type="number">
-/// <item>Chuyển hồ sơ quá hạn check-in sang Missed, gửi từng vòng nhắc, chuyển Missed → Grace.</item>
-/// <item>Phát hành các yêu cầu đã hết thời gian chờ cuối (FinalWait → Released).</item>
+/// <item>Chuyển hồ sơ quá hạn check-in sang Missed, gửi từng vòng nhắc, chuyển Missed → Grace (báo người nhắc nhở),
+/// hết ân hạn thì Grace → Released (tự động bàn giao cho người nhận).</item>
+/// <item>(Cũ, không còn kích hoạt từ giao diện) phát hành các yêu cầu đã hết thời gian chờ cuối (FinalWait → Released).</item>
 /// <item>Xoá tệp bằng chứng của hồ sơ đã đóng quá thời hạn lưu trữ.</item>
 /// </list>
 /// Mỗi hồ sơ được xử lý trong một unit-of-work riêng: lỗi ở một hồ sơ không ảnh hưởng hồ sơ khác.
@@ -53,6 +54,7 @@ public class LifecycleWorker : AsyncPeriodicBackgroundWorkerBase
             ownerIds = await executer.ToListAsync(q.Where(o =>
                     (o.State == LifecycleState.Active && o.NextCheckInDueAt <= now) ||
                     o.State == LifecycleState.Missed ||
+                    o.State == LifecycleState.Grace ||
                     (o.PausedUntil != null && o.PausedUntil <= now))
                 .Select(o => o.Id));
             await uow.CompleteAsync();

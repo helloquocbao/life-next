@@ -1,5 +1,6 @@
 using DeathNote.AuditTrail;
 using DeathNote.Common;
+using DeathNote.Lifecycle;
 using DeathNote.Owners;
 using DeathNote.Releases;
 using DeathNote.Trustees;
@@ -97,41 +98,32 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
     }
 
     /// <summary>
-    /// Phân mảnh ReleaseKey cho người giữ khoá và phân bổ hạng mục cho người nhận.
-    /// Quy tắc: phải gửi mảnh cho ĐÚNG và ĐỦ mọi người giữ khoá đã sẵn sàng; grant chỉ cho trustee đã có khoá công khai.
-    /// Toàn bộ mảnh/grant cũ bị thay thế (phiên bản khoá tăng lên).
+    /// Lưu phần dành cho từng người nhận: mỗi Grant đã được niêm phong ngay trên trình duyệt owner bằng khoá công
+    /// khai của đúng người nhận. Quy tắc: chỉ người nhận thông tin đã hoàn tất lời mời + có khoá công khai mới
+    /// nhận được Grant; không trùng người. Toàn bộ Grant cũ bị thay thế (phiên bản tăng lên).
     /// </summary>
     public async Task<VaultDto> DistributeKeysAsync(DistributeKeysInput input)
     {
         var vault = await GetVaultAsync();
-        if (await _releases.AnyAsync(r => r.OwnerId == UserId && r.Status != ReleaseStatus.Released
-                                          && r.Status != ReleaseStatus.Rejected && r.Status != ReleaseStatus.CancelledByOwner))
-            throw new BusinessException(DeathNoteErrorCodes.ReleaseAlreadyOpen);
+        var owner = await _owners.GetAsync(UserId);
+        if (owner.State == LifecycleState.Released) throw new BusinessException(DeathNoteErrorCodes.AlreadyReleased);
 
         var trustees = await _trustees.GetListAsync(t => t.OwnerId == UserId);
-        var readyIds = trustees.Where(t => t.IsReadyForKeys).Select(t => t.Id).ToHashSet();
-        var keyHolderIds = trustees.Where(t => t.Role == TrusteeRole.KeyHolder && t.IsReadyForKeys).Select(t => t.Id).ToHashSet();
-
-        var shareIds = input.Shares.Select(s => s.TrusteeId).ToList();
-        if (shareIds.Count != keyHolderIds.Count || !keyHolderIds.SetEquals(shareIds))
-            throw new BusinessException(DeathNoteErrorCodes.InvalidShareDeliveries);
-        if (input.Grants.Any(g => !readyIds.Contains(g.TrusteeId)) || input.Grants.Select(g => g.TrusteeId).Distinct().Count() != input.Grants.Count)
+        var readyRecipientIds = trustees.Where(t => t.Role == TrusteeRole.Recipient && t.IsReadyForKeys).Select(t => t.Id).ToHashSet();
+        if (input.Grants.Any(g => !readyRecipientIds.Contains(g.TrusteeId)) || input.Grants.Select(g => g.TrusteeId).Distinct().Count() != input.Grants.Count)
             throw new BusinessException(DeathNoteErrorCodes.InvalidShareDeliveries);
 
-        vault.RegisterKeyDistribution(input.Threshold, keyHolderIds.Count, input.WrappedReleaseKey, input.EncryptedAllocation, Clock.Now);
+        var now = Clock.Now;
+        vault.RegisterKeyDistribution(input.EncryptedAllocation, now);
         await _vaults.UpdateAsync(vault);
 
-        await _keyShares.DeleteAsync(k => k.OwnerId == UserId);
         await _grants.DeleteAsync(g => g.OwnerId == UserId);
-        var now = Clock.Now;
-        await _keyShares.InsertManyAsync(input.Shares.Select(s =>
-            new KeyShare(GuidGenerator.Create(), UserId, s.TrusteeId, vault.KeyVersion, s.SealedShare, now)));
         await _grants.InsertManyAsync(input.Grants.Select(g =>
             new Grant(GuidGenerator.Create(), UserId, g.TrusteeId, vault.KeyVersion, g.SealedPayload, g.ItemCount, now)));
 
         await Audit.RecordAsync(new AuditEntry(AuditActions.KeysDistributed, UserId, ActorType: AuditActorType.Owner,
             ActorUserId: UserId, ActorName: CurrentUserDisplayName,
-            Detail: $"Ngưỡng {input.Threshold}/{keyHolderIds.Count}, {input.Grants.Count} người nhận, phiên bản khoá {vault.KeyVersion}"));
+            Detail: $"{input.Grants.Count} người nhận, phiên bản {vault.KeyVersion}"));
         return vault.ToDto();
     }
 
