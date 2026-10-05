@@ -14,7 +14,12 @@ public class Program
             .MinimumLevel.Override("Volo.Abp", LogEventLevel.Warning)
             .MinimumLevel.Override("DeathNote", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .WriteTo.Async(c => c.File("Logs/logs.txt"))
+            // Xoay vòng theo ngày / 50 MB, giữ 14 tệp — tránh một tệp log phình vô hạn khi chạy tải thật.
+            .WriteTo.Async(c => c.File("Logs/logs-.txt",
+                rollingInterval: RollingInterval.Day,
+                fileSizeLimitBytes: 50 * 1024 * 1024,
+                rollOnFileSizeLimit: true,
+                retainedFileCountLimit: 14))
             .WriteTo.Async(c => c.Console())
             .CreateLogger();
 
