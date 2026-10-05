@@ -186,7 +186,7 @@ function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
   if (sent) {
     return (
       <Result status="success" title="Đã thêm!"
-        subTitle={'Người này CHƯA nhận được thông báo gì. Người nhắc nhở sẽ được mời tự động khi bạn bỏ lỡ xác nhận "vẫn ổn"; người nhận thông tin cần được mời sớm (mục Người thân) để họ tạo khoá cá nhân.'}
+        subTitle={'Người này CHƯA nhận được thông báo gì. Người nhắc nhở sẽ được mời tự động khi bạn bỏ lỡ xác nhận "vẫn ổn"; người nhận thông tin chỉ nhận email khi bạn gặp sự cố.'}
         extra={<Button type="primary" size="large" onClick={onDone} style={{ height: 52, fontSize: 17, paddingInline: 32 }}>Tiếp tục</Button>} />
     );
   }
@@ -196,7 +196,7 @@ function StepTrusteeIntro({ onDone }: { onDone: () => void }) {
       <Typography.Title level={3} style={{ marginTop: 0 }}>Ai sẽ nhận thông tin của bạn?</Typography.Title>
       <Typography.Paragraph style={{ fontSize: 16 }}>
         Bạn chọn những người thân tin cậy với hai việc khác nhau: <b>người nhắc nhở</b> được báo trước để nhắc bạn bấm "Tôi vẫn ổn",
-        và <b>người nhận thông tin</b> tự động nhận phần bạn cho phép nếu bạn vẫn không bấm sau thời gian chờ.
+        và <b>người nhận thông tin</b> — thụ động, không biết gì — chỉ nhận email để xem phần bạn cho phép nếu bạn vẫn không bấm sau thời gian chờ.
       </Typography.Paragraph>
       <Typography.Paragraph type="secondary" style={{ fontSize: 14 }}>
         Thêm một người ngay bây giờ để hình dung rõ hơn — hoặc bấm "Để sau" và thêm họ lúc khác trong mục Người thân.
@@ -240,7 +240,7 @@ function StepWhatHappens({ interval, grace, onDone }: { interval: number; grace:
           { color: 'green', children: `Ngày ${interval}: đến hạn xác nhận "vẫn ổn".` },
           { color: 'gold', children: 'Vài ngày sau: chúng tôi nhắc bạn qua thông báo, email, tin nhắn — mỗi tin có nút "Tôi vẫn ổn" bấm là xong.' },
           { color: 'orange', children: 'Nếu vẫn không có phản hồi: người nhắc nhở bạn chọn được báo "hãy liên lạc với bạn, nhắc bạn bấm Tôi vẫn ổn". Họ KHÔNG xem được gì.' },
-          { color: 'red', children: `Sau ${grace} ngày chờ thêm mà bạn vẫn không bấm: hệ thống tự động gửi cho người nhận thông tin đúng phần bạn đã chọn cho họ.` },
+          { color: 'red', children: `Sau ${grace} ngày chờ thêm mà bạn vẫn không bấm: người nhận thông tin nhận email kèm link để xem đúng phần bạn đã chọn cho họ.` },
           { color: 'gray', children: 'Ở BẤT KỲ lúc nào trong toàn bộ quá trình này, bạn chỉ cần xác nhận "vẫn ổn" là mọi thứ dừng lại ngay lập tức.' },
         ]} />
       </Card>

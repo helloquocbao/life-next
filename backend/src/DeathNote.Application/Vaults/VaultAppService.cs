@@ -26,10 +26,11 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
     private readonly IRepository<KeyShare, Guid> _keyShares;
     private readonly IRepository<Grant, Guid> _grants;
     private readonly IRepository<ReleaseRequest, Guid> _releases;
+    private readonly GrantEscrow _escrow;
 
     public VaultAppService(IRepository<Vault, Guid> vaults, IRepository<VaultItem, Guid> items, IRepository<OwnerProfile, Guid> owners,
         IRepository<Trustee, Guid> trustees, IRepository<KeyShare, Guid> keyShares, IRepository<Grant, Guid> grants,
-        IRepository<ReleaseRequest, Guid> releases)
+        IRepository<ReleaseRequest, Guid> releases, GrantEscrow escrow)
     {
         _vaults = vaults;
         _items = items;
@@ -38,6 +39,7 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
         _keyShares = keyShares;
         _grants = grants;
         _releases = releases;
+        _escrow = escrow;
     }
 
     public async Task<VaultDto> GetAsync() => (await _vaults.FindAsync(UserId)).ToDto();
@@ -98,9 +100,10 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
     }
 
     /// <summary>
-    /// Lưu phần dành cho từng người nhận: mỗi Grant đã được niêm phong ngay trên trình duyệt owner bằng khoá công
-    /// khai của đúng người nhận. Quy tắc: chỉ người nhận thông tin đã hoàn tất lời mời + có khoá công khai mới
-    /// nhận được Grant; không trùng người. Toàn bộ Grant cũ bị thay thế (phiên bản tăng lên).
+    /// Lưu phần dành cho từng người nhận: mỗi Grant được mã hoá ngay trên trình duyệt owner bằng một khoá giao hàng riêng;
+    /// server giữ khoá giao hàng (mã hoá bằng khoá chủ cấu hình, xem <see cref="GrantEscrow"/>) và chỉ trao khi hồ sơ
+    /// bàn giao. Người nhận KHÔNG cần được mời hay tạo khoá trước — họ mặc định không biết gì. Quy tắc: chỉ trao cho
+    /// người ở vai trò "người nhận thông tin", không trùng người. Toàn bộ Grant cũ bị thay thế (phiên bản tăng lên).
     /// </summary>
     public async Task<VaultDto> DistributeKeysAsync(DistributeKeysInput input)
     {
@@ -109,8 +112,8 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
         if (owner.State == LifecycleState.Released) throw new BusinessException(DeathNoteErrorCodes.AlreadyReleased);
 
         var trustees = await _trustees.GetListAsync(t => t.OwnerId == UserId);
-        var readyRecipientIds = trustees.Where(t => t.Role == TrusteeRole.Recipient && t.IsReadyForKeys).Select(t => t.Id).ToHashSet();
-        if (input.Grants.Any(g => !readyRecipientIds.Contains(g.TrusteeId)) || input.Grants.Select(g => g.TrusteeId).Distinct().Count() != input.Grants.Count)
+        var recipientIds = trustees.Where(t => t.Role == TrusteeRole.Recipient).Select(t => t.Id).ToHashSet();
+        if (input.Grants.Any(g => !recipientIds.Contains(g.TrusteeId)) || input.Grants.Select(g => g.TrusteeId).Distinct().Count() != input.Grants.Count)
             throw new BusinessException(DeathNoteErrorCodes.InvalidShareDeliveries);
 
         var now = Clock.Now;
@@ -119,7 +122,8 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
 
         await _grants.DeleteAsync(g => g.OwnerId == UserId);
         await _grants.InsertManyAsync(input.Grants.Select(g =>
-            new Grant(GuidGenerator.Create(), UserId, g.TrusteeId, vault.KeyVersion, g.SealedPayload, g.ItemCount, now)));
+            new Grant(GuidGenerator.Create(), UserId, g.TrusteeId, vault.KeyVersion, g.SealedPayload,
+                _escrow.Protect(g.DeliveryKey, g.TrusteeId), g.ItemCount, now)));
 
         await Audit.RecordAsync(new AuditEntry(AuditActions.KeysDistributed, UserId, ActorType: AuditActorType.Owner,
             ActorUserId: UserId, ActorName: CurrentUserDisplayName,

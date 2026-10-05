@@ -9,8 +9,8 @@ export const roleHint = (r: TrusteeRole | undefined) => (r === undefined ? '' : 
 export const roleExplainer: Record<TrusteeRole, [string, string, string]> = {
   1: [
     'Bạn là người nhận một phần thông tin mà người ấy muốn để lại cho bạn.',
-    'Nếu một ngày người ấy ngừng xác nhận mình vẫn ổn, và sau thời gian chờ vẫn không phản hồi, phần này sẽ tự động được gửi cho bạn.',
-    'Trước lúc đó bạn không cần làm gì thêm (ngoài việc tạo khoá cá nhân ở bước tiếp theo), và không ai xem được nội dung — kể cả PICO.',
+    'Nếu một ngày người ấy ngừng xác nhận mình vẫn ổn, và sau thời gian chờ vẫn không phản hồi, bạn sẽ nhận một email để xem phần này.',
+    'Trước lúc đó bạn không cần làm gì và không nhận thông báo nào — bạn chỉ được báo khi thật sự có chuyện.',
   ],
   2: [
     'Bạn là người được báo trước tiên nếu người ấy không còn bấm "Tôi vẫn ổn".',

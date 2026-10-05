@@ -3,6 +3,7 @@ using System;
 using DeathNote.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace DeathNote.Migrations
 {
     [DbContext(typeof(DeathNoteDbContext))]
-    partial class DeathNoteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005021336_AddGrantEscrowedKey")]
+    partial class AddGrantEscrowedKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

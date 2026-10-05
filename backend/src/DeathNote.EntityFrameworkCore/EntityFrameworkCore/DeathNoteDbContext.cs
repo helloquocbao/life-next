@@ -124,6 +124,7 @@ public class DeathNoteDbContext : AbpDbContext<DeathNoteDbContext>
             b.ToTable(p + "Grants", s);
             b.ConfigureByConvention();
             b.Property(x => x.SealedPayload).IsRequired();
+            b.Property(x => x.EscrowedKey).HasMaxLength(512);
             b.HasIndex(x => new { x.OwnerId, x.KeyVersion });
             b.HasIndex(x => x.TrusteeId);
         });

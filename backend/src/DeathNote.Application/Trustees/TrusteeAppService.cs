@@ -61,7 +61,7 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
             owner.Id, owner.DisplayName, nameof(Trustee), trustee.Id.ToString(),
             trustee.Role == TrusteeRole.Reminder
                 ? $"{trustee.DisplayName} — {trustee.Role} (chưa gửi lời mời, sẽ tự gửi khi owner bỏ lỡ xác nhận)"
-                : $"{trustee.DisplayName} — {trustee.Role} (chưa gửi lời mời — cần mời để họ tạo khoá trước khi nhận được thông tin)"));
+                : $"{trustee.DisplayName} — {trustee.Role} (không mời trước; chỉ được báo khi hồ sơ bàn giao)"));
         return trustee.ToDto(false, 0);
     }
 
@@ -101,6 +101,8 @@ public class TrusteeAppService : DeathNoteAppService, ITrusteeAppService
     {
         var owner = await GetOwnerAsync();
         var trustee = await GetMyTrusteeAsync(id);
+        // Người nhận thông tin mặc định không biết gì: chỉ được báo (kèm link nhận) khi hồ sơ bàn giao, không mời trước.
+        if (trustee.Role == TrusteeRole.Recipient) throw new BusinessException(DeathNoteErrorCodes.RecipientNotInvitedInAdvance);
         await _invitationSender.SendAsync(owner, trustee, Clock.Now);
         await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeInvited, owner.Id, trustee.Id, AuditActorType.Owner,
             owner.Id, owner.DisplayName, nameof(Trustee), trustee.Id.ToString(), $"{trustee.DisplayName} — {trustee.Role} (owner chủ động gửi)"));

@@ -164,7 +164,7 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
     private static ReadinessDto BuildReadiness(OwnerStatusDto s, List<Trustee> trustees)
     {
         var hasReminder = trustees.Any(t => t.Role == TrusteeRole.Reminder);
-        var readyRecipients = trustees.Count(t => t.Role == TrusteeRole.Recipient && t.IsReadyForKeys);
+        var hasRecipient = trustees.Any(t => t.Role == TrusteeRole.Recipient);
         var checks = new List<ReadinessCheckDto>
         {
             new() { Code = "vault", Label = "Tạo két dữ liệu mã hoá", Done = s.VaultInitialized, Weight = 15 },
@@ -172,7 +172,7 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             new() { Code = "first_item", Label = "Thêm hạng mục đầu tiên", Done = s.ItemCount >= 1, Weight = 15 },
             new() { Code = "five_items", Label = "Có ít nhất 5 hạng mục", Done = s.ItemCount >= 5, Weight = 10 },
             new() { Code = "reminder", Label = "Có người nhắc nhở khi bạn không xác nhận", Done = hasReminder, Weight = 10 },
-            new() { Code = "recipient", Label = "Có người nhận thông tin đã hoàn tất lời mời", Done = readyRecipients >= 1, Weight = 15 },
+            new() { Code = "recipient", Label = "Có người nhận thông tin", Done = hasRecipient, Weight = 15 },
             new() { Code = "keys", Label = "Chọn thông tin cho từng người nhận", Done = s.KeysDistributed && !s.KeysOutdated, Weight = 15 },
             new() { Code = "two_factor", Label = "Bật xác thực hai lớp cho mở két", Done = s.VaultUnlockTwoFactorEnabled, Weight = 5 },
         };
@@ -333,7 +333,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         var o = _policy.Options;
         var reminders = trustees.Count(t => t.Role == TrusteeRole.Reminder);
         var recipients = trustees.Where(t => t.Role == TrusteeRole.Recipient).ToList();
-        var readyRecipients = recipients.Count(t => t.IsReadyForKeys);
 
         var steps = new List<DryRunStepDto>
         {
@@ -344,15 +343,13 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             new() { State = LifecycleState.Grace, Title = "Báo người nhắc nhở", DurationDays = owner.GraceDays, OwnerCanCancel = true,
                 Description = $"{reminders} người nhắc nhở nhận tin \"hãy liên lạc với {owner.DisplayName}, nhắc họ bấm Tôi vẫn ổn\". Họ không xem được dữ liệu nào. Bạn vẫn huỷ được bằng một lần bấm." },
             new() { State = LifecycleState.Released, Title = "Tự động bàn giao", DurationDays = 0, OwnerCanCancel = false,
-                Description = $"Hết {owner.GraceDays} ngày mà bạn vẫn không xác nhận, {readyRecipients} người nhận thông tin tự động nhận phần bạn đã chọn cho họ. Mỗi người chỉ mở được đúng phần của mình, bằng khoá riêng trên thiết bị của họ." },
+                Description = $"Hết {owner.GraceDays} ngày mà bạn vẫn không xác nhận, {recipients.Count} người nhận thông tin nhận email kèm link để xem phần bạn đã chọn cho họ. Mỗi người chỉ xem được đúng phần của mình." },
         };
 
         var blockers = new List<string>();
         if (vault == null) blockers.Add("Chưa tạo két dữ liệu.");
         if (reminders == 0) blockers.Add("Chưa có người nhắc nhở — sẽ không ai được báo khi bạn im lặng.");
         if (recipients.Count == 0) blockers.Add("Chưa có người nhận thông tin nào.");
-        else if (readyRecipients == 0) blockers.Add("Người nhận thông tin chưa hoàn tất lời mời (cần mời và để họ tạo khoá cá nhân) nên chưa nhận được gì.");
-        else if (readyRecipients < recipients.Count) blockers.Add($"{recipients.Count - readyRecipients} người nhận chưa hoàn tất lời mời — họ sẽ không nhận được thông tin.");
         if (vault is { HasKeyDistribution: false }) blockers.Add("Chưa chọn thông tin cho người nhận.");
         if (vault is { KeysOutdated: true }) blockers.Add("Danh sách người nhận đã thay đổi — cần lưu lại lựa chọn thông tin.");
 

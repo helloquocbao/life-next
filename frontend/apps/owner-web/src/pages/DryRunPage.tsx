@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { Alert, Button, Card, Col, Empty, List, Row, Space, Steps, Tag, Typography } from 'antd';
-import { TrusteeRole, TrusteeStatus } from '@deathnote/api';
+import { TrusteeRole } from '@deathnote/api';
 import { ErrorAlert, FullPageSpin, colors, trusteeRoleLabel } from '@deathnote/ui';
 import { UnlockGate } from '../components/UnlockGate';
 import { useDryRun, useOwnerStatus, useTrustees } from '../lib/api-hooks';
@@ -55,8 +55,8 @@ function RecipientPreview() {
   const allocation = useAllocation();
   const { items } = useDecryptedItems();
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const recipients = (trustees.data ?? []).filter((t) => t.role === TrusteeRole.Recipient && t.status === TrusteeStatus.Confirmed);
-  if (!recipients.length) return <Card><Empty description="Chưa có người nhận thông tin nào hoàn tất lời mời." /></Card>;
+  const recipients = (trustees.data ?? []).filter((t) => t.role === TrusteeRole.Recipient);
+  if (!recipients.length) return <Card><Empty description="Chưa có người nhận thông tin nào." /></Card>;
 
   return (
     <Row gutter={[16, 16]}>

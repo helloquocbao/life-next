@@ -35,7 +35,7 @@ export function ReleasedPhase({ a }: { a: AssignmentDto }) {
     <>
       <p className="lead">Phần {a.ownerName} để lại cho bạn đã sẵn sàng.</p>
       <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-        Hồ sơ được bàn giao lúc {formatDateTime(a.releasedAt)}. Bạn sẽ cần passphrase khoá cá nhân.
+        Hồ sơ được bàn giao lúc {formatDateTime(a.releasedAt)}.
         Hãy mở khi bạn sẵn sàng — không có gì phải vội.
       </Typography.Paragraph>
       <Button type="primary" size="large" block style={{ height: 60, fontSize: 18 }} onClick={() => navigate(`/inbox/${a.trusteeId}`)}>

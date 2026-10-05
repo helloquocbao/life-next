@@ -10,30 +10,13 @@ public class InvitationDto
     public string TrusteeName { get; set; } = default!;
     public TrusteeRole Role { get; set; }
     public string? Relationship { get; set; }
+    /// <summary>True khi hồ sơ đã bàn giao và đây là link nhận thông tin (người nhận chưa từng được mời trước).</summary>
+    public bool IsDelivery { get; set; }
 }
 
 public class AcceptInvitationInput
 {
     [Required] public string Token { get; set; } = default!;
-}
-
-public class KeyringDto
-{
-    public bool Exists { get; set; }
-    public string? PublicKey { get; set; }
-    public string? EncryptedPrivateKey { get; set; }
-    public string? KdfSalt { get; set; }
-    public long KdfOpsLimit { get; set; }
-    public long KdfMemLimit { get; set; }
-}
-
-public class CreateKeyringInput
-{
-    [Required, StringLength(128)] public string PublicKey { get; set; } = default!;
-    [Required, StringLength(512)] public string EncryptedPrivateKey { get; set; } = default!;
-    [Required, StringLength(128)] public string KdfSalt { get; set; } = default!;
-    public long KdfOpsLimit { get; set; }
-    public long KdfMemLimit { get; set; }
 }
 
 /// <summary>Giai đoạn hiển thị cho người được uỷ quyền — mỗi giai đoạn chỉ một việc cần làm.</summary>
@@ -85,14 +68,16 @@ public class ContactResponseInput
     public ContactResponse Response { get; set; }
 }
 
-/// <summary>Hộp nhận sau khi bàn giao: phần riêng của mình, đã niêm phong bằng khoá công khai của mình.</summary>
+/// <summary>Hộp nhận sau khi bàn giao: phần riêng của mình + khoá giao hàng để mở (chỉ trao cho đúng người nhận đã xác thực).</summary>
 public class InboxDto
 {
     public Guid TrusteeId { get; set; }
     public string OwnerName { get; set; } = default!;
     public DateTime ReleasedAt { get; set; }
-    /// <summary>Grant niêm phong cho mình (thư mở đầu + danh sách hạng mục kèm ItemKey). Chỉ mở được bằng khoá riêng.</summary>
-    public string? SealedGrant { get; set; }
+    /// <summary>Grant đã mã hoá bằng khoá giao hàng (thư mở đầu + danh sách hạng mục kèm ItemKey).</summary>
+    public string? EncryptedGrant { get; set; }
+    /// <summary>Khoá giao hàng (base64) — chỉ có khi hồ sơ đã Released. Giải mã grant ngay trên trình duyệt người nhận.</summary>
+    public string? DeliveryKey { get; set; }
     public int GrantItemCount { get; set; }
 }
 

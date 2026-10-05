@@ -21,14 +21,14 @@ export const checkInChannelLabel: Record<CheckInChannel, string> = {
 };
 
 // Hai vai trò, viết bằng ngôn ngữ đời thường theo đúng trình tự xảy ra:
-//   1) Người nhắc nhở: được báo TRƯỚC khi owner ngừng bấm "Tôi vẫn ổn" — việc của họ là liên lạc và nhắc owner bấm nút.
-//   2) Người nhận thông tin: nếu hết thời gian ân hạn mà owner vẫn không bấm, tự động nhận phần owner cho phép.
+//   1) Người nhắc nhở: được báo khi owner ngừng bấm "Tôi vẫn ổn" — việc của họ là liên lạc và nhắc owner bấm nút.
+//   2) Người nhận thông tin: THỤ ĐỘNG, mặc định không biết gì; hết ân hạn mà owner vẫn không bấm thì mới nhận email để xem phần owner cho phép.
 export const trusteeRoleLabel: Record<TrusteeRole, string> = {
   1: 'Người nhận thông tin', 2: 'Người nhắc nhở',
 };
 
 export const trusteeRoleHint: Record<TrusteeRole, string> = {
-  1: 'Nếu người nhắc nhở đã báo mà bạn vẫn không bấm "Tôi vẫn ổn" sau thời gian ân hạn, người này tự động nhận toàn bộ phần bạn cho phép. Trước đó họ không biết gì.',
+  1: 'Mặc định không biết gì, không nhận email nào. Chỉ khi bạn gặp sự cố (người nhắc nhở đã báo mà bạn vẫn không bấm "Tôi vẫn ổn" sau thời gian ân hạn), người này nhận email kèm link để xem toàn bộ phần bạn cho phép.',
   2: 'Khi bạn ngừng bấm "Tôi vẫn ổn", người này được báo trước tiên. Việc của họ là liên lạc và nhắc bạn bấm nút. Họ không nhận bất kỳ thông tin nào của bạn.',
 };
 

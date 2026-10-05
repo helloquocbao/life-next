@@ -1,18 +1,17 @@
 /**
- * Hộp nhận — nơi người thân nhận phần owner để lại. Thứ tự hiển thị có chủ đích:
- *   0) Nhập passphrase → mở phần được niêm phong riêng cho mình & giải mã NGAY TRÊN TRÌNH DUYỆT (xem lib/inbox.ts).
+ * Hộp nhận — nơi người nhận xem phần owner để lại. Thứ tự hiển thị có chủ đích:
+ *   0) Tự động mở & giải mã NGAY TRÊN TRÌNH DUYỆT (xem lib/inbox.ts) — không cần passphrase hay khoá cá nhân.
  *   a) Thư mở đầu — toàn màn hình, trước mọi thứ khác.
  *   b) Bản đồ tài sản (số lượng theo loại) → c) Checklist việc cần làm → d) Chi tiết hạng mục → e) Xuất PDF.
  *
  * Nội dung đã giải mã chỉ ở trong bộ nhớ (zustand), không ghi xuống storage.
  */
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Button, Card, Flex, Typography } from 'antd';
+import { Button, Card, Flex, Spin, Typography } from 'antd';
 import { ArrowLeftOutlined, LockOutlined, PrinterOutlined } from '@ant-design/icons';
-import { ErrorAlert, FullPageSpin, LegalNotice, formatDateTime } from '@deathnote/ui';
-import { PassphraseForm } from '../components/trustee/PassphraseForm';
-import { useKeyring } from '../lib/trusteePortalHooks';
-import { openInboxWithPassphrase } from '../lib/inbox';
+import { ErrorAlert, LegalNotice, formatDateTime } from '@deathnote/ui';
+import { openInboxFor } from '../lib/inbox';
 import { useInboxSession } from '../session/inboxSession';
 import { LetterScreen } from './inbox/LetterScreen';
 import { AssetMap } from './inbox/AssetMap';
@@ -22,36 +21,52 @@ import { ItemDetails } from './inbox/ItemDetails';
 export function InboxPage() {
   const { trusteeId = '' } = useParams();
   const navigate = useNavigate();
-  const keyring = useKeyring();
   const inbox = useInboxSession((s) => s.inboxes[trusteeId]);
   const setInbox = useInboxSession((s) => s.setInbox);
   const markLetterSeen = useInboxSession((s) => s.markLetterSeen);
   const lock = useInboxSession((s) => s.lock);
+  const [progress, setProgress] = useState('Đang mở phần dành cho bạn…');
+  const [error, setError] = useState<unknown>();
+  const started = useRef(false);
 
-  if (keyring.isLoading) return <FullPageSpin />;
-  if (keyring.error) return <div className="page-trustee"><ErrorAlert error={keyring.error} /></div>;
+  const load = useCallback(async () => {
+    setError(undefined);
+    try {
+      setInbox(trusteeId, await openInboxFor(trusteeId, setProgress));
+    } catch (e) {
+      setError(e);
+    }
+  }, [trusteeId, setInbox]);
 
-  // Bước 0: chưa mở → nhập passphrase.
+  // Chưa mở trong phiên này → tự mở (StrictMode gọi effect 2 lần ở dev nên chặn bằng ref).
+  useEffect(() => {
+    if (inbox || started.current) return;
+    started.current = true;
+    void load();
+  }, [inbox, load]);
+
   if (!inbox)
     return (
       <div className="page-trustee">
         <Card>
-          <Typography.Title level={3} style={{ marginTop: 0 }}>Mở hộp nhận</Typography.Title>
-          <Typography.Paragraph>
-            Nhập passphrase khoá cá nhân bạn đã tạo khi nhận vai trò. Việc mở khoá và giải mã diễn ra ngay trên
-            trình duyệt này — PICO không đọc được nội dung.
+          <Typography.Title level={3} style={{ marginTop: 0 }}>Phần được để lại cho bạn</Typography.Title>
+          {error ? (
+            <>
+              <ErrorAlert error={error} />
+              <Flex gap={8} style={{ marginTop: 16 }}>
+                <Button type="primary" onClick={() => void load()}>Thử lại</Button>
+                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/assignments')}>Quay lại</Button>
+              </Flex>
+            </>
+          ) : (
+            <Flex align="center" gap={12} style={{ padding: '12px 0' }}>
+              <Spin />
+              <Typography.Text>{progress}</Typography.Text>
+            </Flex>
+          )}
+          <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>
+            Việc giải mã diễn ra ngay trên trình duyệt này.
           </Typography.Paragraph>
-          <PassphraseForm
-            submitText="Mở hộp nhận"
-            hint="Có thể mất vài giây."
-            onSubmit={async (pass, setProgress) => {
-              const opened = await openInboxWithPassphrase(trusteeId, keyring.data, pass, setProgress);
-              setInbox(trusteeId, opened);
-            }}
-          />
-          <Button type="link" icon={<ArrowLeftOutlined />} style={{ paddingLeft: 0, marginTop: 16 }} onClick={() => navigate('/assignments')}>
-            Về Hồ sơ tôi giữ giúp
-          </Button>
           <LegalNotice style={{ marginTop: 16 }} />
         </Card>
       </div>

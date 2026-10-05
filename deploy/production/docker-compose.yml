@@ -63,6 +63,9 @@ services:
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
 
       DeathNote__CheckInLinkSecret: ${CHECKIN_LINK_SECRET:?}
+      # Khoá chủ mã hoá "khoá giao hàng" của người nhận thông tin (≥ 32 ký tự). MẤT khoá này = mọi phần đã phân cho người nhận
+      # không còn mở được; LỘ khoá này + CSDL = đọc được phần đã phân. Đặt riêng cho từng môi trường, sao lưu an toàn.
+      DeathNote__EscrowKey: ${ESCROW_KEY:?}
       DeathNote__SeedDemoUsers: "false"
 
       Settings__Abp.Mailing.DefaultFromAddress: ${SMTP_FROM}

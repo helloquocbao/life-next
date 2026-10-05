@@ -31,7 +31,6 @@ export type SaveTrusteeInput = S['Trustees.SaveTrusteeInput'];
 
 // Trustee portal
 export type InvitationDto = S['TrusteePortal.InvitationDto'];
-export type KeyringDto = S['TrusteePortal.KeyringDto'];
 export type AssignmentDto = S['TrusteePortal.AssignmentDto'];
 export type InboxDto = S['TrusteePortal.InboxDto'];
 export type ReleasedItemDto = S['TrusteePortal.ReleasedItemDto'];

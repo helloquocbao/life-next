@@ -59,8 +59,8 @@ public class SaveVaultItemInput
 
 /// <summary>
 /// "Ai nhận gì": ma trận phân bổ (mã hoá bằng VaultKey, để owner chỉnh lại về sau) + một Grant cho mỗi người nhận.
-/// Mỗi Grant đã được NIÊM PHONG bằng khoá công khai của đúng người nhận ngay trên trình duyệt owner — server không
-/// đọc được và chỉ trao khi hồ sơ được bàn giao.
+/// Mỗi Grant được mã hoá ngay trên trình duyệt owner bằng một khoá giao hàng riêng cho người đó; server giữ khoá giao hàng
+/// (mã hoá bằng khoá chủ cấu hình) và chỉ trao cho người nhận khi hồ sơ được bàn giao.
 /// </summary>
 public class DistributeKeysInput
 {
@@ -71,6 +71,9 @@ public class DistributeKeysInput
 public class SealedGrantInput
 {
     public Guid TrusteeId { get; set; }
+    /// <summary>GrantPayload đã mã hoá bằng khoá giao hàng (client mã hoá).</summary>
     [Required] public string SealedPayload { get; set; } = default!;
+    /// <summary>Khoá giao hàng (base64). Server mã hoá bằng khoá chủ rồi giữ; chỉ trao cho người nhận sau khi bàn giao.</summary>
+    [Required, StringLength(128)] public string DeliveryKey { get; set; } = default!;
     [Range(0, 10000)] public int ItemCount { get; set; }
 }

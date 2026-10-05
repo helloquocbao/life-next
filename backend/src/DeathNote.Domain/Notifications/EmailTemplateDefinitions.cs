@@ -144,11 +144,11 @@ public static partial class EmailTemplateDefinitions
             "<p>Chào {{trusteeName}},</p><p>Thẩm định viên yêu cầu bổ sung: {{note}}</p>" + Button("Bổ sung ngay")),
 
         new(EmailTemplateKeys.TrusteeReleased, "Báo trustee — dữ liệu đã bàn giao",
-            "Gửi người nhận khi hồ sơ được bàn giao.",
+            "Gửi người nhận thông tin khi hồ sơ được bàn giao (lần đầu họ được báo). Link: tạo mật khẩu nếu chưa có tài khoản, đăng nhập nếu đã có.",
             [TrusteeName, OwnerName, Link],
             "Thông tin {{ownerName}} để lại cho bạn đã sẵn sàng",
             "<p>Chào {{trusteeName}},</p><p>Chúng tôi rất tiếc phải gửi thông báo này. {{ownerName}} đã chuẩn bị sẵn một số thông tin và lời nhắn dành cho bạn.</p>"
-            + "<p>Bạn sẽ cần passphrase cá nhân đã tạo khi nhận lời mời để giải mã.</p>" + Button("Mở hộp nhận")),
+            + "<p>Bấm nút bên dưới để xem. Nếu đây là lần đầu bạn dùng Death Note, bạn chỉ cần tạo một mật khẩu; nếu đã có tài khoản, hãy đăng nhập.</p>" + Button("Xem thông tin được để lại")),
     ];
 
     private static readonly Dictionary<string, EmailTemplateDefinition> ByKey = All.ToDictionary(d => d.Key);

@@ -19,5 +19,5 @@ export const auth = createAuth({
 /** Mọi lời gọi API tự đính kèm access token; hết phiên → quay lại trang đăng nhập. */
 export const api = createApiClient(API_URL, auth.getAccessToken, () => void auth.logout());
 
-/** Độ dài tối thiểu của passphrase khoá cá nhân (trustee) / mật khẩu chính két (owner). */
+/** Độ dài tối thiểu của mật khẩu chính két (owner). */
 export const MIN_PASSPHRASE_LENGTH = 10;

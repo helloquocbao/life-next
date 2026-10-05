@@ -3,9 +3,8 @@
  *   1) Người nhắc nhở — được báo trước, nhiệm vụ nhắc bạn bấm nút.
  *   2) Người nhận thông tin — hết thời gian ân hạn mà bạn vẫn không bấm thì tự động nhận phần bạn cho phép.
  *
- * Thêm mới KHÔNG gửi email ngay. Người nhắc nhở được mời tự động khi bạn thật sự bỏ lỡ xác nhận. Người nhận
- * thông tin thì cần được mời SỚM (ở trang Người nhận) để họ tạo khoá cá nhân — phần dành cho họ được niêm phong
- * bằng khoá đó, nên không mời trước thì họ không thể nhận được gì.
+ * Thêm mới KHÔNG gửi email ngay. Người nhắc nhở được mời tự động khi bạn thật sự bỏ lỡ xác nhận. Người nhận thông tin
+ * thì THỤ ĐỘNG: không mời, không báo gì trước — họ chỉ nhận email (kèm link xem) khi bạn gặp sự cố.
  */
 import { useEffect } from 'react';
 import { App, Form, Input, Modal, Radio } from 'antd';
@@ -44,7 +43,7 @@ export function TrusteeFormModal({ open, trustee, defaultRole, onClose }: {
     message.success(
       trustee ? 'Đã cập nhật.'
         : values.role === TrusteeRole.Recipient
-          ? 'Đã thêm. Hãy gửi lời mời để họ tạo khoá cá nhân — chưa có khoá thì họ chưa nhận được thông tin.'
+          ? 'Đã thêm. Họ không biết gì và không nhận email nào — chỉ được báo khi bạn gặp sự cố. Nhớ chọn thông tin cho họ.'
           : 'Đã thêm. Họ chưa biết gì — hệ thống sẽ tự mời khi bạn bỏ lỡ xác nhận.',
     );
     onClose();
@@ -81,8 +80,8 @@ export function TrusteeFormModal({ open, trustee, defaultRole, onClose }: {
         <div className="role-timeline muted">
           <b>Cách hoạt động:</b> bạn ngừng bấm "Tôi vẫn ổn" → hệ thống nhắc bạn → <b>người nhắc nhở</b> được báo
           {graceDays ? <> và có <b>{graceDays} ngày</b> để liên lạc với bạn</> : ' và có vài ngày để liên lạc với bạn'} → nếu bạn vẫn không bấm,{' '}
-          <b>người nhận thông tin</b> tự động nhận phần bạn đã chọn. Bạn bấm "Tôi vẫn ổn" ở bất kỳ lúc nào trước đó là mọi thứ dừng lại.
-          {role === TrusteeRole.Recipient && ' Người nhận thông tin cần được mời sớm để tạo khoá cá nhân.'}
+          <b>người nhận thông tin</b> mới nhận email kèm link để xem phần bạn đã chọn. Trước đó họ hoàn toàn không biết gì. Bạn bấm "Tôi vẫn ổn" ở bất kỳ lúc nào trước đó là mọi thứ dừng lại.
+          {role === TrusteeRole.Recipient && ' Người nhận không cần tạo tài khoản hay làm gì trước.'}
         </div>
         <ErrorAlert error={save.error} style={{ marginTop: 12 }} />
       </Form>

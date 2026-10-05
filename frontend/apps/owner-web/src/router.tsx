@@ -14,7 +14,6 @@
  *   VAI TRÒ TRUSTEE (được người khác nhờ giữ khoá) — KHÔNG bắt buộc phải hoàn tất onboarding owner:
  *   /invite               Xem lời mời (công khai, chưa cần đăng nhập) — layout riêng, không có sidebar
  *   /assignments          "Hồ sơ tôi giữ giúp" — những owner đã giao mình vai trò (người nhắc nhở / người nhận thông tin)
- *   /keyring              Tạo khoá cá nhân (X25519) cho vai trò trustee
  *   /inbox/:trusteeId     Hộp nhận sau khi hồ sơ owner đã được mở
  *
  * Cố ý tách "giới thiệu sản phẩm" khỏi "tạo két": bắt nhập mật khẩu chính + 12 từ khôi phục ngay
@@ -40,7 +39,6 @@ import { CheckInLinkPage } from './pages/CheckInLinkPage';
 import { AssignmentsPage } from './pages/AssignmentsPage';
 import { InboxPage } from './pages/InboxPage';
 import { InvitePage } from './pages/InvitePage';
-import { KeyringPage } from './pages/KeyringPage';
 
 /**
  * Owner chưa xem giới thiệu → đưa về onboarding. Chỉ kiểm tra ĐÃ CÓ HỒ SƠ, không kiểm tra đã tạo
@@ -65,7 +63,6 @@ export const router = createBrowserRouter([
     children: [
       // Vai trò trustee — không cần đã onboard vai trò owner.
       { path: 'assignments', element: <AssignmentsPage /> },
-      { path: 'keyring', element: <KeyringPage /> },
       { path: 'inbox/:trusteeId', element: <InboxPage /> },
       // Vai trò owner — bắt buộc đã onboard.
       {

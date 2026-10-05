@@ -32,6 +32,7 @@ public static class DeathNoteErrorCodes
     public const string AlreadyConsented = "DeathNote:03003";
     public const string OnlyKeyHoldersCanConsent = "DeathNote:03004";
     public const string InvalidShareDeliveries = "DeathNote:03005";
+    public const string RecipientNotInvitedInAdvance = "DeathNote:03007";
     public const string ReleaseNotReviewable = "DeathNote:03006";
     public const string SameAdminCannotVoteTwice = "DeathNote:03007";
     public const string SuperAdminCannotApprove = "DeathNote:03008";

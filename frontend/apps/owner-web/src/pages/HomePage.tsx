@@ -28,7 +28,7 @@ const NEXT_ACTION_LINK: Record<string, { to: string; cta: string; plain: string 
   first_item: { to: '/vault', cta: 'Thêm ngay', plain: 'Cất thông tin đầu tiên của bạn' },
   five_items: { to: '/assets', cta: 'Trả lời vài câu hỏi', plain: 'Cho chúng tôi biết thêm về tài sản của bạn' },
   reminder: { to: '/recipients', cta: 'Thêm người', plain: 'Chọn người sẽ nhắc bạn bấm "Tôi vẫn ổn"' },
-  recipient: { to: '/recipients', cta: 'Mời họ', plain: 'Mời người sẽ nhận thông tin của bạn' },
+  recipient: { to: '/recipients', cta: 'Thêm người', plain: 'Chọn người sẽ nhận thông tin của bạn' },
   keys: { to: '/recipients', cta: 'Chọn thông tin', plain: 'Chọn thông tin cho từng người nhận' },
   two_factor: { to: '/settings?tab=security', cta: 'Bật ngay', plain: 'Thêm một lớp bảo vệ khi xác nhận' },
 };

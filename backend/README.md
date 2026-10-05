@@ -40,7 +40,7 @@ Toàn bộ code bám sát 5 nguyên tắc:
    dạng rõ — kể cả cho admin. Xem cột `Ciphertext`/`Wrapped*`/`Sealed*` trong
    [`DeathNoteDbContext`](src/DeathNote.EntityFrameworkCore/EntityFrameworkCore/DeathNoteDbContext.cs).
 3. **Hai vai trò, đúng trình tự.** *Người nhắc nhở* được báo trước để nhắc owner bấm "Tôi vẫn ổn" (không nhận
-   thông tin nào); *người nhận thông tin* tự động nhận phần owner cho phép khi hết ân hạn (không được báo gì trước đó).
+   thông tin nào); *người nhận thông tin* thụ động — chỉ nhận email kèm link để xem phần owner cho phép khi hết ân hạn.
    Xem [`TrusteeRole.cs`](src/DeathNote.Domain.Shared/Trustees/TrusteeRole.cs).
 4. **Owner luôn có quyền phủ quyết.** Check-in ở bất kỳ giai đoạn nào trước `Released` huỷ ngay toàn
    bộ tiến trình. Xem `LifecycleManager.CheckInAsync`.
@@ -64,7 +64,7 @@ Active ──quá hạn──▶ Missed ──hết các vòng nhắc owner─�
 |---|---|---|
 | `Missed` | Chỉ owner (push → email → sms → gọi) | Tự mời người nhắc nhở chưa được mời |
 | `Grace` | **Người nhắc nhở** | "Hãy liên lạc, nhắc owner bấm Tôi vẫn ổn", kèm số ngày còn lại |
-| `Released` | **Người nhận thông tin** (chỉ ai thật sự có phần) | Server mới trao `Grant` đã niêm phong cho đúng từng người |
+| `Released` | **Người nhận thông tin** (chỉ ai thật sự có phần) | Email kèm link; server mới trao khoá giao hàng cho đúng từng người |
 
 Tham số vòng đời cấu hình tại `DeathNote:Policy` trong `appsettings.json`
 ([`LifecyclePolicyOptions`](src/DeathNote.Domain/Lifecycle/LifecyclePolicyOptions.cs)):
@@ -89,12 +89,18 @@ lưu trữ ciphertext:
 - Khoá riêng của bất kỳ ai, ở bất kỳ dạng nào.
 - Nội dung thư/video để lại.
 
-Với **mỗi người nhận**, owner đóng gói (thư + danh sách hạng mục kèm khoá từng hạng mục) rồi **niêm phong**
-(`crypto_box_seal`, X25519) bằng khoá công khai của đúng người đó — ngay trên trình duyệt owner. Server giữ bản niêm
-phong và chỉ trao khi hồ sơ `Released`. Người nhận mở bằng khoá riêng nằm trên thiết bị của họ, bọc bằng passphrase của
-chính họ; kể cả khi toàn bộ hạ tầng bị chiếm quyền, kẻ tấn công vẫn cần khoá riêng của người nhận.
-**Hệ quả:** người nhận thông tin phải được mời sớm và tạo khoá cá nhân TRƯỚC — chưa có khoá thì phần dành cho họ
-không thể được niêm phong và họ sẽ không nhận được gì. Người nhắc nhở không cần khoá.
+Với **mỗi người nhận**, owner đóng gói (thư + danh sách hạng mục kèm khoá từng hạng mục) rồi mã hoá bằng một
+**khoá giao hàng** ngẫu nhiên riêng cho người đó, ngay trên trình duyệt owner. Server giữ khoá giao hàng (mã hoá AES-GCM
+bằng khoá chủ `DeathNote:EscrowKey` ở cấu hình máy chủ, [`GrantEscrow.cs`](src/DeathNote.Domain/Vaults/GrantEscrow.cs)) và
+chỉ trao cho đúng người nhận khi hồ sơ `Released`.
+
+**Người nhận thụ động:** không được mời, không nhận email, không cần tài khoản hay khoá từ trước. Khi bàn giao họ nhận email
+kèm link `/invite?token=…`: chưa có tài khoản thì đăng ký (tạo mật khẩu), có rồi thì đăng nhập, rồi vào thẳng hộp nhận.
+
+> **Đánh đổi bảo mật (đã chọn có chủ đích):** phần dành cho người nhận KHÔNG còn là "chỉ người nhận mở được". Ai kiểm soát
+> cả CSDL lẫn `EscrowKey` đều giải mã được các phần đã phân cho người nhận (không phải toàn bộ két — phần không được phân vẫn
+> chỉ owner mở được). Vì vậy `EscrowKey` phải ngẫu nhiên, đặt riêng từng môi trường (biến `ESCROW_KEY` ở deploy), sao lưu an
+> toàn và **không đổi** sau khi đã có dữ liệu (mất/đổi khoá = các phần đã phân không còn mở được).
 
 ## 5. Tech stack
 

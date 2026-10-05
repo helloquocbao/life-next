@@ -1,22 +1,20 @@
 /**
- * Màn hình lời mời (công khai — xem được khi chưa đăng nhập).
+ * Màn hình link trong email (công khai — xem được khi chưa đăng nhập). Hai trường hợp:
  *
- * Luồng: xem lời mời → "Chấp nhận vai trò" → (chưa đăng nhập ⇒ form đăng nhập/đăng ký nhúng ngay trong
- *        trang, gọi REST API, không rời trang) → (CHỈ người nhận thông tin, chưa có khoá cá nhân ⇒ tạo khoá)
- *        → accept-invitation. Người nhắc nhở không cần khoá.
+ *  1) LỜI MỜI (người nhắc nhở): xem lời mời → "Chấp nhận vai trò" → (chưa đăng nhập ⇒ form đăng nhập/đăng ký nhúng ngay
+ *     trong trang, gọi REST API, không rời trang) → accept-invitation → danh sách hồ sơ. Không cần khoá cá nhân.
  *
- * Thứ tự "tạo khoá TRƯỚC khi chấp nhận" giúp backend gắn luôn khoá công khai vào hồ sơ khi accept,
- * để owner có thể niêm phong phần dành cho người này ngay.
+ *  2) NHẬN THÔNG TIN (người nhận, `isDelivery`): người nhận mặc định không biết gì từ trước; link này chỉ đến khi owner
+ *     gặp sự cố. Bấm "Xem thông tin" → (chưa có tài khoản ⇒ đăng ký = tạo mật khẩu; có rồi ⇒ đăng nhập) → tự gắn link vào
+ *     tài khoản → mở thẳng hộp nhận.
  */
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Alert, App, Button, Card, Result, Typography } from 'antd';
-import { TrusteeRole } from '@deathnote/api';
 import { ErrorAlert, FullPageSpin, LegalNotice, LoginForm } from '@deathnote/ui';
 import { auth } from '../config';
 import { useCurrentUser } from '../auth/useCurrentUser';
-import { KeyringSetupForm } from '../components/trustee/KeyringSetupForm';
-import { useAcceptInvitation, useInvitation, useKeyring } from '../lib/trusteePortalHooks';
+import { useAcceptInvitation, useInvitation } from '../lib/trusteePortalHooks';
 import { roleExplainer, roleLabel } from '../lib/trusteeLabels';
 
 export function InvitePage() {
@@ -27,36 +25,37 @@ export function InvitePage() {
 
   const user = useCurrentUser();
   const invitation = useInvitation(token);
-  const keyring = useKeyring(!!user);
   const accept = useAcceptInvitation();
-  const [step, setStep] = useState<'view' | 'auth' | 'keyring'>('view');
+  const [step, setStep] = useState<'view' | 'auth'>('view');
   const [justSignedIn, setJustSignedIn] = useState(false);
+
+  const isDelivery = !!invitation.data?.isDelivery;
 
   const doAccept = () =>
     accept.mutate(token, {
-      onSuccess: () => {
-        message.success('Bạn đã nhận vai trò. Cảm ơn bạn.');
-        navigate('/assignments', { replace: true });
+      onSuccess: (a) => {
+        if (isDelivery && a.trusteeId) {
+          navigate(`/inbox/${a.trusteeId}`, { replace: true });
+        } else {
+          message.success('Bạn đã nhận vai trò. Cảm ơn bạn.');
+          navigate('/assignments', { replace: true });
+        }
       },
     });
 
-  const needsKey = invitation.data?.role === TrusteeRole.Recipient;
-
   const onAcceptClick = () => {
     if (!user) return setStep('auth');
-    // Chỉ người nhận thông tin cần khoá cá nhân (phần dành cho họ được niêm phong bằng khoá công khai đó).
-    if (needsKey && !keyring.data?.exists) return setStep('keyring');
     doAccept();
   };
 
   if (!token)
-    return <Result status="warning" title="Thiếu mã lời mời" subTitle="Hãy mở lại đường link đầy đủ trong email mời." />;
-  if (invitation.isLoading || user === undefined) return <FullPageSpin tip="Đang tải lời mời…" />;
+    return <Result status="warning" title="Thiếu mã" subTitle="Hãy mở lại đường link đầy đủ trong email." />;
+  if (invitation.isLoading || user === undefined) return <FullPageSpin tip="Đang tải…" />;
   if (invitation.error)
     return (
       <Card>
-        <Result status="warning" title="Lời mời không còn hiệu lực"
-          subTitle="Đường link có thể đã hết hạn hoặc đã được dùng. Hãy liên hệ người đã mời bạn để nhận link mới." />
+        <Result status="warning" title="Đường link không còn hiệu lực"
+          subTitle="Đường link có thể đã hết hạn hoặc đã được dùng. Nếu bạn đã tạo tài khoản, hãy đăng nhập vào Death Note để xem." />
         <ErrorAlert error={invitation.error} />
       </Card>
     );
@@ -67,18 +66,43 @@ export function InvitePage() {
     return (
       <>
         <Typography.Paragraph type="secondary">
-          Đăng nhập hoặc tạo tài khoản để nhận vai trò {inv.ownerName} giao cho bạn.
+          {isDelivery
+            ? `Để xem thông tin ${inv.ownerName} để lại cho bạn: nếu chưa có tài khoản, chọn "Đăng ký" bên dưới để tạo mật khẩu (dùng đúng email nhận thư này); nếu đã có, hãy đăng nhập.`
+            : `Đăng nhập hoặc tạo tài khoản để nhận vai trò ${inv.ownerName} giao cho bạn.`}
         </Typography.Paragraph>
-        <LoginForm auth={auth} embedded onSuccess={() => { setJustSignedIn(true); setStep('view'); }} />
-        <Button type="link" style={{ paddingLeft: 0, marginTop: 8 }} onClick={() => setStep('view')}>← Quay lại lời mời</Button>
+        <LoginForm auth={auth} embedded onSuccess={() => {
+          setJustSignedIn(true);
+          setStep('view');
+          // Nhận thông tin: không cần thêm bước nào nữa — vào thẳng hộp nhận ngay sau khi đăng nhập.
+          if (isDelivery) doAccept();
+        }} />
+        <Button type="link" style={{ paddingLeft: 0, marginTop: 8 }} onClick={() => setStep('view')}>← Quay lại</Button>
       </>
     );
 
-  if (step === 'keyring')
+  if (isDelivery)
     return (
       <Card>
-        <KeyringSetupForm submitText="Tạo khoá và chấp nhận vai trò" onDone={doAccept} />
-        <ErrorAlert error={accept.error} style={{ marginTop: 16 }} />
+        {justSignedIn && user && (
+          <Alert type="success" showIcon style={{ marginBottom: 16 }} title="Đã đăng nhập. Bấm “Xem thông tin” để tiếp tục." />
+        )}
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>Xin chào {inv.trusteeName},</Typography.Paragraph>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>{inv.ownerName} đã để lại thông tin cho bạn</Typography.Title>
+        {inv.relationship && <Typography.Paragraph type="secondary">Mối quan hệ: {inv.relationship}</Typography.Paragraph>}
+        <div style={{ fontSize: 17, lineHeight: 1.7 }}>
+          <p style={{ margin: '0 0 10px' }}>
+            Chúng tôi rất tiếc phải gửi thông báo này. {inv.ownerName} đã chuẩn bị sẵn một số thông tin và lời nhắn dành riêng cho bạn.
+          </p>
+          <p style={{ margin: '0 0 10px' }}>
+            Nếu đây là lần đầu bạn dùng Death Note, bạn chỉ cần tạo một mật khẩu. Hãy xem khi bạn sẵn sàng — không có gì phải vội.
+          </p>
+        </div>
+        <Button type="primary" size="large" block style={{ height: 60, fontSize: 18, marginTop: 16 }}
+          loading={accept.isPending} onClick={onAcceptClick}>
+          Xem thông tin
+        </Button>
+        <ErrorAlert error={accept.error} style={{ marginTop: 12 }} />
+        <LegalNotice style={{ marginTop: 24 }} />
       </Card>
     );
 
@@ -102,10 +126,10 @@ export function InvitePage() {
       )}
 
       <Button type="primary" size="large" block style={{ height: 60, fontSize: 18, marginTop: 16 }}
-        loading={accept.isPending || (!!user && keyring.isLoading)} onClick={onAcceptClick}>
+        loading={accept.isPending} onClick={onAcceptClick}>
         Chấp nhận vai trò
       </Button>
-      <ErrorAlert error={accept.error ?? keyring.error} style={{ marginTop: 12 }} />
+      <ErrorAlert error={accept.error} style={{ marginTop: 12 }} />
 
       <LegalNotice style={{ marginTop: 24 }} />
     </Card>

@@ -225,7 +225,7 @@ public class LifecycleManager : DomainService
     /// <summary>
     /// Hết ân hạn: chuyển hồ sơ sang Released. Từ lúc này server mới trao phần đã niêm phong (Grant) cho từng
     /// người nhận — mỗi người tự mở bằng khoá cá nhân trên thiết bị của họ. Chỉ báo những người nhận THỰC SỰ
-    /// có phần để mở (đã hoàn tất lời mời + được owner phân hạng mục/thư), tránh gửi thông báo rỗng.
+    /// có phần để mở (được owner phân hạng mục/thư), tránh gửi thông báo rỗng. Người nhận mặc định không biết gì từ trước.
     /// </summary>
     private async Task ReleaseToRecipientsAsync(OwnerProfile owner, DateTime now)
     {
@@ -233,20 +233,15 @@ public class LifecycleManager : DomainService
         await RecordStateChangeAsync(owner, LifecycleState.Grace);
 
         var grants = await _grants.GetListAsync(g => g.OwnerId == owner.Id);
-        var recipients = (await _trustees.GetListAsync(t =>
-                t.OwnerId == owner.Id && t.Role == TrusteeRole.Recipient && t.Status == TrusteeStatus.Confirmed))
+        var recipients = (await _trustees.GetListAsync(t => t.OwnerId == owner.Id && t.Role == TrusteeRole.Recipient))
             .Where(t => grants.Any(g => g.TrusteeId == t.Id))
             .ToList();
 
         await _audit.RecordAsync(new AuditEntry(AuditActions.AutoReleased, owner.Id,
             Detail: $"Hết {owner.GraceDays} ngày ân hạn mà owner không xác nhận — tự động bàn giao cho {recipients.Count} người nhận"));
 
-        foreach (var t in recipients)
-        {
-            var (subject, body) = await _templates.TrusteeReleasedAsync(t.DisplayName, owner.DisplayName, _urls.AppUrl);
-            await _notifier.SendAsync(new NotificationMessage(t.DisplayName, t.Email, t.PhoneNumber, subject, body,
-                NotificationChannels.Email | NotificationChannels.Sms));
-        }
+        // Người nhận chưa từng biết gì: email này (kèm link nhận) là lần đầu họ được báo.
+        foreach (var t in recipients) await _invitationSender.SendDeliveryAsync(owner, t, now);
     }
 
     private Task RecordStateChangeAsync(OwnerProfile owner, LifecycleState from)

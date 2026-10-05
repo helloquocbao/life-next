@@ -4,12 +4,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { unwrap, type ContactResponse } from '@deathnote/api';
-import type { KeyringPayload } from '@deathnote/crypto';
 import { api } from '../config';
 
 export const qk = {
   invitation: (token: string) => ['trustee', 'invitation', token] as const,
-  keyring: ['trustee', 'keyring'] as const,
   assignments: ['trustee', 'assignments'] as const,
   activity: (trusteeId: string) => ['trustee', 'activity', trusteeId] as const,
 };
@@ -22,10 +20,6 @@ export const useInvitation = (token: string) =>
     enabled: !!token,
     retry: false,
   });
-
-/** Khoá cá nhân của người dùng hiện tại (khoá riêng đã bọc bằng passphrase). */
-export const useKeyring = (enabled = true) =>
-  useQuery({ queryKey: qk.keyring, queryFn: () => unwrap(api.GET('/api/app/trustee-portal/keyring')), enabled });
 
 /** Các hồ sơ mình là trustee — tự làm mới mỗi 10 giây để thấy chuyển trạng thái (đặc biệt khi demo). */
 export const useAssignments = (enabled = true) =>
@@ -47,14 +41,6 @@ export const useActivity = (trusteeId: string, enabled: boolean) =>
 function useInvalidateTrustee() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: ['trustee'] });
-}
-
-export function useCreateKeyring() {
-  const invalidate = useInvalidateTrustee();
-  return useMutation({
-    mutationFn: (body: KeyringPayload) => unwrap(api.POST('/api/app/trustee-portal/keyring', { body })),
-    onSuccess: invalidate,
-  });
 }
 
 export function useAcceptInvitation() {

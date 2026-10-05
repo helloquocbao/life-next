@@ -6,8 +6,8 @@
  * components/DistributionSection.tsx.
  */
 import { useState } from 'react';
-import { App, Button, Card, Popconfirm, Space, Steps, Tag, Typography } from 'antd';
-import { BellOutlined, EditOutlined, GiftOutlined, KeyOutlined, MailOutlined, PlusOutlined } from '@ant-design/icons';
+import { App, Button, Card, Modal, Popconfirm, Space, Steps, Tag, Typography } from 'antd';
+import { BellOutlined, EditOutlined, FolderOpenOutlined, GiftOutlined, KeyOutlined, MailOutlined, PlusOutlined } from '@ant-design/icons';
 import { TrusteeRole, TrusteeStatus, unwrap, type TrusteeDto } from '@deathnote/api';
 import {
   EmptyCard, ErrorAlert, PageHeader, SplitRow, StatusTag, colors,
@@ -30,6 +30,7 @@ export function RecipientsPage() {
   const trustees = useTrustees();
   const status = useOwnerStatus();
   const [modal, setModal] = useState<ModalState>({ open: false });
+  const [pickerOpen, setPickerOpen] = useState(false);
   const invalidate = useInvalidateOwner();
   const { message } = App.useApp();
   const graceDays = status.data?.graceDays;
@@ -79,22 +80,26 @@ export function RecipientsPage() {
                 right={<Button type="primary" icon={<PlusOutlined />} onClick={() => setModal({ open: true, role: sec.role })}>{sec.addLabel}</Button>} />
               <Space direction="vertical" size={12} style={{ width: '100%', marginTop: 12 }}>
                 {!trustees.isLoading && members.length === 0 && <EmptyCard description={sec.empty} />}
-                {members.map((t) => <TrusteeCard key={t.id} t={t} onEdit={() => setModal({ open: true, trustee: t })} onResend={() => resend(t)} onRemove={() => remove(t)} />)}
+                {members.map((t) => <TrusteeCard key={t.id} t={t} onPick={() => setPickerOpen(true)} onEdit={() => setModal({ open: true, trustee: t })} onResend={() => resend(t)} onRemove={() => remove(t)} />)}
               </Space>
             </section>
           );
         })}
 
+      </Space>
+      {/* Màn này chỉ QUẢN TRỊ người thân — không bắt mở khoá két. Chỉ khi bấm "Chọn thông tin" (cần đọc hạng mục trong két
+          để mã hoá phần cho từng người) mới hỏi mở khoá, ngay trong hộp thoại. */}
+      <Modal open={pickerOpen} onCancel={() => setPickerOpen(false)} footer={null} width={760} destroyOnHidden title="Chọn thông tin cho từng người nhận">
         <UnlockGate reason="Mở khoá để chọn thông tin cho từng người nhận.">
           <DistributionSection trustees={list} />
         </UnlockGate>
-      </Space>
+      </Modal>
       <TrusteeFormModal open={modal.open} trustee={modal.trustee} defaultRole={modal.role} onClose={() => setModal({ open: false })} />
     </div>
   );
 }
 
-function TrusteeCard({ t, onEdit, onResend, onRemove }: { t: TrusteeDto; onEdit: () => void; onResend: () => void; onRemove: () => void }) {
+function TrusteeCard({ t, onPick, onEdit, onResend, onRemove }: { t: TrusteeDto; onPick: () => void; onEdit: () => void; onResend: () => void; onRemove: () => void }) {
   const isRecipient = t.role === TrusteeRole.Recipient;
   const notInvited = t.status === TrusteeStatus.NotInvitedYet;
   return (
@@ -106,24 +111,17 @@ function TrusteeCard({ t, onEdit, onResend, onRemove }: { t: TrusteeDto; onEdit:
             <div className="muted">{t.relationship ?? 'Người thân'} · {t.email}</div>
             <Space wrap style={{ marginTop: 8 }}>
               <Tag>{trusteeRoleLabel[t.role ?? TrusteeRole.Reminder]}</Tag>
-              <StatusTag value={t.status ?? 0} label={trusteeStatusLabel} color={trusteeStatusColor} />
-              {isRecipient && t.hasCurrentGrant && <Tag icon={<KeyOutlined />} color="green">Đã chuẩn bị phần cho họ</Tag>}
+              {!isRecipient && <StatusTag value={t.status ?? 0} label={trusteeStatusLabel} color={trusteeStatusColor} />}
+              {isRecipient && t.hasCurrentGrant && <Tag icon={<KeyOutlined />} color="green">Đã chuẩn bị {t.grantItemCount ?? 0} mục cho họ</Tag>}
             </Space>
 
-            {/* Người nhận thông tin: cần mời SỚM để tạo khoá — nếu chưa thì nói rõ hậu quả */}
-            {isRecipient && notInvited && (
-              <div style={{ fontSize: 13, marginTop: 6, color: colors.amber }}>
-                Chưa mời — họ cần tạo khoá cá nhân trước thì mới nhận được thông tin. Bấm "Gửi lời mời ngay".
+            {isRecipient && !t.hasCurrentGrant && (
+              <div style={{ fontSize: 13, marginTop: 6, color: colors.amber }}>Chưa chọn thông tin cho người này.</div>
+            )}
+            {isRecipient && t.hasCurrentGrant && (
+              <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                Họ chưa biết gì. Họ chỉ nhận email khi bạn gặp sự cố (không bấm "Tôi vẫn ổn" sau thời gian ân hạn).
               </div>
-            )}
-            {isRecipient && t.status === TrusteeStatus.Pending && (
-              <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>Đã mời — đang chờ họ mở lời mời và tạo khoá cá nhân.</div>
-            )}
-            {isRecipient && t.status === TrusteeStatus.Confirmed && !t.publicKey && (
-              <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>Đang chờ họ tạo khoá cá nhân để hoàn tất.</div>
-            )}
-            {isRecipient && t.status === TrusteeStatus.Confirmed && !!t.publicKey && !t.hasCurrentGrant && (
-              <div style={{ fontSize: 13, marginTop: 6, color: colors.amber }}>Họ đã sẵn sàng — hãy chọn thông tin cho họ ở phần bên dưới.</div>
             )}
             {!isRecipient && notInvited && (
               <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
@@ -137,11 +135,12 @@ function TrusteeCard({ t, onEdit, onResend, onRemove }: { t: TrusteeDto; onEdit:
         }
         right={
           <>
-            {t.status !== TrusteeStatus.Confirmed && (
-              <Button type={isRecipient && notInvited ? 'primary' : 'default'} icon={<MailOutlined />} onClick={onResend}>
+            {!isRecipient && t.status !== TrusteeStatus.Confirmed && (
+              <Button icon={<MailOutlined />} onClick={onResend}>
                 {notInvited ? 'Gửi lời mời ngay' : 'Gửi lại lời mời'}
               </Button>
             )}
+            {isRecipient && <Button type={t.hasCurrentGrant ? 'default' : 'primary'} icon={<FolderOpenOutlined />} onClick={onPick}>Chọn thông tin</Button>}
             <Button icon={<EditOutlined />} onClick={onEdit}>Sửa</Button>
             <Popconfirm title="Xoá người này?" description={isRecipient ? 'Phần bạn đã chọn cho họ cũng sẽ bị xoá.' : undefined} onConfirm={onRemove} okText="Xoá" cancelText="Không">
               <Button danger>Xoá</Button>

@@ -3,7 +3,7 @@ import { App, Alert, Button, Card, Flex, List, Space, Typography } from 'antd';
 import { CheckCircleTwoTone } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { buildDistribution, type Allocation } from '@deathnote/crypto';
-import { TrusteeRole, TrusteeStatus, unwrap, type TrusteeDto } from '@deathnote/api';
+import { TrusteeRole, unwrap, type TrusteeDto } from '@deathnote/api';
 import { ErrorAlert, colors } from '@deathnote/ui';
 import { api } from '../config';
 import { useOwnerStatus, useVault } from '../lib/api-hooks';
@@ -13,9 +13,9 @@ import { useVaultSession } from '../session/vaultSession';
 import { AllocationEditor } from './AllocationEditor';
 
 /**
- * "Ai nhận gì" — chọn thông tin cho từng NGƯỜI NHẬN THÔNG TIN. Phần dành cho mỗi người được niêm phong ngay trên
- * thiết bị của bạn bằng khoá công khai của họ; hết thời gian ân hạn mà bạn không bấm "Tôi vẫn ổn" thì hệ thống
- * tự động trao cho họ. Người nhắc nhở không nhận thông tin nào nên không xuất hiện ở đây.
+ * "Ai nhận gì" — chọn thông tin cho từng NGƯỜI NHẬN THÔNG TIN. Phần dành cho mỗi người được mã hoá ngay trên thiết bị
+ * của bạn; hết thời gian ân hạn mà bạn không bấm "Tôi vẫn ổn" thì hệ thống gửi email kèm link để họ xem. Họ mặc định không
+ * biết gì và không cần làm gì trước. Người nhắc nhở không nhận thông tin nào nên không xuất hiện ở đây.
  */
 export function DistributionSection({ trustees }: { trustees: TrusteeDto[] }) {
   const vaultKey = useVaultSession((s) => s.vaultKey);
@@ -26,10 +26,8 @@ export function DistributionSection({ trustees }: { trustees: TrusteeDto[] }) {
   const qc = useQueryClient();
   const { message, modal } = App.useApp();
 
-  // Chỉ người nhận đã xác nhận VÀ đã tạo khoá cá nhân mới có thể nhận phần được niêm phong.
-  const recipients = trustees.filter((t) => t.role === TrusteeRole.Recipient);
-  const ready = recipients.filter((t) => t.status === TrusteeStatus.Confirmed && !!t.publicKey);
-  const notReady = recipients.filter((t) => !ready.includes(t));
+  // Người nhận thông tin mặc định không biết gì — không cần được mời hay tạo khoá trước, nên ai cũng chọn phần được ngay.
+  const ready = trustees.filter((t) => t.role === TrusteeRole.Recipient);
 
   const [allocation, setAllocation] = useState<Allocation>({ v: 1, assignments: {}, letters: {} });
   const [dirty, setDirty] = useState(false);
@@ -63,7 +61,7 @@ export function DistributionSection({ trustees }: { trustees: TrusteeDto[] }) {
       const payload = await buildDistribution({
         vaultKey,
         ownerName: status.data?.displayName ?? '',
-        recipients: ready.map((t) => ({ id: t.id!, publicKey: t.publicKey! })),
+        recipients: ready.map((t) => ({ id: t.id! })),
         items: items.map((i) => ({ id: i.id, itemKey: i.itemKey, title: i.data.title, kind: i.data.kind })),
         allocation,
       });
@@ -94,18 +92,12 @@ export function DistributionSection({ trustees }: { trustees: TrusteeDto[] }) {
           title={dirty ? 'Bạn có thay đổi chưa lưu.' : 'Danh sách người nhận vừa thay đổi.'}
           description='Bấm "Lưu lựa chọn" ở cuối trang để cập nhật cho đúng.' />
       )}
-      {notReady.length > 0 && (
-        <Alert type="warning" showIcon
-          title={`${notReady.length} người nhận chưa hoàn tất lời mời — họ sẽ KHÔNG nhận được thông tin.`}
-          description={`Hãy bấm "Gửi lời mời ngay" cho ${notReady.map((t) => t.displayName).join(', ')} để họ tạo khoá cá nhân. Thiếu bước này, phần dành cho họ không thể được niêm phong.`} />
-      )}
-
       <Card title="Chọn thông tin cho từng người nhận">
         <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
-          Nếu bạn không bấm "Tôi vẫn ổn" sau thời gian ân hạn{status.data?.graceDays ? ` (${status.data.graceDays} ngày)` : ''}, hệ thống tự động gửi cho mỗi người đúng phần bạn chọn ở đây.
+          Nếu bạn không bấm "Tôi vẫn ổn" sau thời gian ân hạn{status.data?.graceDays ? ` (${status.data.graceDays} ngày)` : ''}, mỗi người nhận một email kèm link để xem đúng phần bạn chọn ở đây. Trước đó họ không biết gì.
         </Typography.Paragraph>
         {ready.length === 0 ? (
-          <Typography.Text type="secondary">Chưa có người nhận nào sẵn sàng. Thêm một "Người nhận thông tin" rồi gửi lời mời để họ tạo khoá.</Typography.Text>
+          <Typography.Text type="secondary">Chưa có người nhận nào. Thêm một "Người nhận thông tin" ở trên.</Typography.Text>
         ) : (
           <List dataSource={ready} renderItem={(t) => {
             const count = (allocation.assignments[t.id!] ?? []).length;

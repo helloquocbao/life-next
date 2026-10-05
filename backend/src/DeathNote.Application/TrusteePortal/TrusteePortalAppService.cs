@@ -23,36 +23,36 @@ namespace DeathNote.TrusteePortal;
 public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppService
 {
     private readonly IRepository<Trustee, Guid> _trustees;
-    private readonly IRepository<UserKeyring, Guid> _keyrings;
     private readonly IRepository<OwnerProfile, Guid> _owners;
     private readonly IRepository<Vault, Guid> _vaults;
     private readonly IRepository<VaultItem, Guid> _items;
     private readonly IRepository<Grant, Guid> _grants;
     private readonly IRepository<AuditEvent, Guid> _auditEvents;
     private readonly LifecyclePolicy _policy;
+    private readonly GrantEscrow _escrow;
 
     public TrusteePortalAppService(
         IRepository<Trustee, Guid> trustees,
-        IRepository<UserKeyring, Guid> keyrings,
         IRepository<OwnerProfile, Guid> owners,
         IRepository<Vault, Guid> vaults,
         IRepository<VaultItem, Guid> items,
         IRepository<Grant, Guid> grants,
         IRepository<AuditEvent, Guid> auditEvents,
-        LifecyclePolicy policy)
+        LifecyclePolicy policy,
+        GrantEscrow escrow)
     {
         _trustees = trustees;
-        _keyrings = keyrings;
         _owners = owners;
         _vaults = vaults;
         _items = items;
         _grants = grants;
         _auditEvents = auditEvents;
         _policy = policy;
+        _escrow = escrow;
     }
 
     // =====================================================================
-    //  GIAI ĐOẠN 1 — Lời mời & chuẩn bị
+    //  GIAI ĐOẠN 1 — Lời mời (người nhắc nhở) / link nhận thông tin (người nhận)
     // =====================================================================
 
     [AllowAnonymous]
@@ -65,46 +65,21 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
             OwnerName = owner.DisplayName,
             TrusteeName = trustee.DisplayName,
             Role = trustee.Role,
-            Relationship = trustee.Relationship
+            Relationship = trustee.Relationship,
+            // Người nhận chỉ nhận được link khi hồ sơ đã bàn giao — đó là link nhận thông tin, không phải lời mời.
+            IsDelivery = trustee.Role == TrusteeRole.Recipient && owner.State == LifecycleState.Released
         };
     }
 
     public async Task<AssignmentDto> AcceptInvitationAsync(AcceptInvitationInput input)
     {
         var trustee = await FindByTokenAsync(input.Token);
-        var keyring = await _keyrings.FindAsync(UserId);
-        trustee.Accept(UserId, keyring?.PublicKey, Clock.Now);
+        trustee.Accept(UserId, null, Clock.Now);
         await _trustees.UpdateAsync(trustee, autoSave: true);
-        if (trustee.Role == TrusteeRole.Recipient) await MarkOwnerKeysOutdatedAsync(trustee.OwnerId);
 
         await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeAccepted, trustee.OwnerId, trustee.Id, AuditActorType.Trustee,
             UserId, trustee.DisplayName, nameof(Trustee), trustee.Id.ToString()));
         return await BuildAssignmentAsync(trustee);
-    }
-
-    public async Task<KeyringDto> GetKeyringAsync() => ToDto(await _keyrings.FindAsync(UserId));
-
-    /// <summary>
-    /// Lưu cặp khoá cá nhân (khoá riêng đã bọc bằng passphrase của trustee). Sau đó gắn khoá công khai
-    /// vào mọi hồ sơ mà người này là trustee, để owner có thể niêm phong phần dành cho họ.
-    /// </summary>
-    public async Task<KeyringDto> CreateKeyringAsync(CreateKeyringInput input)
-    {
-        var existing = await _keyrings.FindAsync(UserId);
-        if (existing != null) return ToDto(existing);
-
-        var keyring = new UserKeyring(UserId, input.PublicKey, input.EncryptedPrivateKey, input.KdfSalt, input.KdfOpsLimit, input.KdfMemLimit);
-        await _keyrings.InsertAsync(keyring, autoSave: true);
-
-        foreach (var t in await _trustees.GetListAsync(t => t.UserId == UserId))
-        {
-            t.SetPublicKey(input.PublicKey);
-            await _trustees.UpdateAsync(t);
-            if (t.Role == TrusteeRole.Recipient) await MarkOwnerKeysOutdatedAsync(t.OwnerId);
-            await Audit.RecordAsync(new AuditEntry(AuditActions.TrusteeKeyringCreated, t.OwnerId, t.Id, AuditActorType.Trustee,
-                UserId, t.DisplayName));
-        }
-        return ToDto(keyring);
     }
 
     public async Task<List<AssignmentDto>> GetAssignmentsAsync()
@@ -141,8 +116,9 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
     // =====================================================================
 
     /// <summary>
-    /// Hộp nhận: trả Grant đã niêm phong cho đúng mình. Việc mở Grant (bằng khoá riêng của người nhận) và giải mã
-    /// hạng mục hoàn toàn diễn ra trên trình duyệt của họ. Chỉ mở được khi hồ sơ đã bàn giao.
+    /// Hộp nhận: trả Grant đã mã hoá + khoá giao hàng của ĐÚNG người nhận này, chỉ khi hồ sơ đã bàn giao. Việc giải mã
+    /// grant và hạng mục diễn ra trên trình duyệt người nhận. Người nhận không cần tạo khoá hay nhớ passphrase gì —
+    /// chỉ cần đăng nhập (xác thực bằng link trong email lúc bàn giao).
     /// </summary>
     public async Task<InboxDto> GetInboxAsync(Guid trusteeId)
     {
@@ -159,7 +135,8 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
             TrusteeId = trustee.Id,
             OwnerName = owner.DisplayName,
             ReleasedAt = owner.StateChangedAt,
-            SealedGrant = grant?.SealedPayload,
+            EncryptedGrant = grant?.SealedPayload,
+            DeliveryKey = grant?.EscrowedKey is { } escrowed ? _escrow.Unprotect(escrowed, trustee.Id) : null,
             GrantItemCount = grant?.ItemCount ?? 0
         };
     }
@@ -269,16 +246,4 @@ public class TrusteePortalAppService : DeathNoteAppService, ITrusteePortalAppSer
         vault.MarkKeysOutdated();
         await _vaults.UpdateAsync(vault);
     }
-
-    private static KeyringDto ToDto(UserKeyring? k) => k == null
-        ? new KeyringDto { Exists = false }
-        : new KeyringDto
-        {
-            Exists = true,
-            PublicKey = k.PublicKey,
-            EncryptedPrivateKey = k.EncryptedPrivateKey,
-            KdfSalt = k.KdfSalt,
-            KdfOpsLimit = k.KdfOpsLimit,
-            KdfMemLimit = k.KdfMemLimit
-        };
 }

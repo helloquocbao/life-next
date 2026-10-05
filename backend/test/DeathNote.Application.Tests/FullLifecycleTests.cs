@@ -73,8 +73,8 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
     {
         var notifier = S<CapturingNotificationSender>();
         var policy = S<LifecyclePolicy>();
-        string TokenFor(string email) => Uri.UnescapeDataString(Regex.Match(
-            notifier.Sent.Last(m => m.Email == email && m.Subject.Contains("người được uỷ quyền")).HtmlBody, @"token=([^""&]+)").Groups[1].Value);
+        string TokenFor(string email, string subjectPart = "người được uỷ quyền") => Uri.UnescapeDataString(Regex.Match(
+            notifier.Sent.Last(m => m.Email == email && m.Subject.Contains(subjectPart)).HtmlBody, @"token=([^""&]+)").Groups[1].Value);
 
         // ---------------- 1. Owner thiết lập: 2 người nhắc nhở + 1 người nhận thông tin ----------------
         Guid binhId, chauId, dungId;
@@ -99,46 +99,48 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             (binhId, chauId, dungId) = (binh.Id, chau.Id, dung.Id);
             new[] { binh, chau, dung }.ShouldAllBe(t => t.Status == TrusteeStatus.NotInvitedYet);
 
-            // Người nhận phải được mời SỚM (để tạo khoá trước): owner chủ động mời. Người nhắc nhở thì chưa cần.
-            await trustees.ResendInvitationAsync(dungId);
+            // Người nhận thông tin mặc định KHÔNG biết gì: không mời trước được (khác người nhắc nhở).
+            (await Should.ThrowAsync<BusinessException>(() => trustees.ResendInvitationAsync(dungId)))
+                .Code.ShouldBe(DeathNoteErrorCodes.RecipientNotInvitedInAdvance);
         }
-        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(1);
+        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(0);
 
-        // ---------------- 2. Người nhận tạo khoá + chấp nhận; owner niêm phong phần dành cho họ ----------------
-        using (As(_trusteeUsers[2], "dung"))
-        {
-            var portal = S<ITrusteePortalAppService>();
-            await portal.CreateKeyringAsync(new CreateKeyringInput { PublicKey = "pk-dung", EncryptedPrivateKey = "esk-dung", KdfSalt = "c2FsdA==", KdfOpsLimit = 3, KdfMemLimit = 64 << 20 });
-            (await portal.AcceptInvitationAsync(new AcceptInvitationInput { Token = TokenFor("dung@test.local") })).Phase.ShouldBe(TrusteePhase.Normal);
-        }
+        // ---------------- 2. Owner chọn phần cho người nhận — người nhận KHÔNG hề biết, không cần tài khoản/khoá ----------------
+        var deliveryKey = Convert.ToBase64String(new byte[32].Select((_, i) => (byte)(i + 1)).ToArray());
         using (As(_ownerId, "an"))
         {
-            var status = await S<IOwnerAppService>().GetStatusAsync();
-            status.KeysOutdated.ShouldBeFalse(); // chưa từng phân bổ nên chưa "lỗi thời"
-
-            // Chỉ người nhận thông tin đã sẵn sàng mới nhận được Grant: người nhắc nhở bị từ chối.
+            // Chỉ người nhận thông tin mới nhận được phần: người nhắc nhở bị từ chối.
             var bad = await Should.ThrowAsync<BusinessException>(() => S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
             {
                 EncryptedAllocation = "enc-allocation",
-                Grants = [new SealedGrantInput { TrusteeId = binhId, SealedPayload = "grant-for-binh", ItemCount = 1 }]
+                Grants = [new SealedGrantInput { TrusteeId = binhId, SealedPayload = "grant-for-binh", DeliveryKey = deliveryKey, ItemCount = 1 }]
             }));
             bad.Code.ShouldBe(DeathNoteErrorCodes.InvalidShareDeliveries);
 
             var vault = await S<IVaultAppService>().DistributeKeysAsync(new DistributeKeysInput
             {
                 EncryptedAllocation = "enc-allocation",
-                Grants = [new SealedGrantInput { TrusteeId = dungId, SealedPayload = "grant-for-dung", ItemCount = 2 }]
+                Grants = [new SealedGrantInput { TrusteeId = dungId, SealedPayload = "grant-for-dung", DeliveryKey = deliveryKey, ItemCount = 2 }]
             });
             vault.KeyVersion.ShouldBe(1);
             vault.KeysOutdated.ShouldBeFalse();
             (await S<ITrusteeAppService>().GetListAsync()).Single(t => t.Id == dungId).HasCurrentGrant.ShouldBeTrue();
         }
+        // Khoá giao hàng được server giữ ở dạng mã hoá, không nằm rõ trong CSDL.
+        await InUow(async () =>
+        {
+            var g = await S<IRepository<DeathNote.Vaults.Grant, Guid>>().FirstAsync(x => x.TrusteeId == dungId);
+            g.EscrowedKey.ShouldNotBeNullOrEmpty();
+            g.EscrowedKey!.ShouldNotContain(deliveryKey);
+            S<DeathNote.Vaults.GrantEscrow>().Unprotect(g.EscrowedKey, dungId).ShouldBe(deliveryKey);
+            Should.Throw<Exception>(() => S<DeathNote.Vaults.GrantEscrow>().Unprotect(g.EscrowedKey, binhId)); // gắn với đúng người nhận
+        });
 
         // ---------------- 3. Owner im lặng → Missed: chỉ nhắc OWNER; tự mời người nhắc nhở ----------------
         FakeClock.Advance(TimeSpan.FromDays(7.1));
         await Tick();
         (await Owner()).State.ShouldBe(LifecycleState.Missed);
-        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(3); // +2 người nhắc nhở, KHÔNG mời thêm người nhận
+        notifier.Sent.Count(m => m.Subject.Contains("người được uỷ quyền")).ShouldBe(2); // chỉ 2 người nhắc nhở, KHÔNG mời người nhận
 
         foreach (var (user, name, email) in new[] { (_trusteeUsers[0], "binh", "binh@test.local"), (_trusteeUsers[1], "chau", "chau@test.local") })
         {
@@ -171,16 +173,7 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
             // Người nhắc nhở không có hộp nhận.
             (await Should.ThrowAsync<BusinessException>(() => portal.GetInboxAsync(binhId))).Code.ShouldBe(DeathNoteErrorCodes.NotATrustee);
         }
-        using (As(_trusteeUsers[2], "dung"))
-        {
-            var portal = S<ITrusteePortalAppService>();
-            // Người nhận KHÔNG được báo gì trong lúc owner im lặng, và chưa mở được hộp nhận.
-            (await portal.GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Normal);
-            (await Should.ThrowAsync<BusinessException>(() => portal.GetInboxAsync(dungId))).Code.ShouldBe(DeathNoteErrorCodes.ReleaseNotYetReleased);
-            (await Should.ThrowAsync<BusinessException>(() => portal.RespondContactAsync(new ContactResponseInput { TrusteeId = dungId, Response = ContactResponse.CanReach })))
-                .Code.ShouldBe(DeathNoteErrorCodes.NotATrustee);
-        }
-        notifier.Sent.ShouldNotContain(m => m.Email == "dung@test.local" && m.Subject.Contains("sẵn sàng"));
+        notifier.Sent.ShouldNotContain(m => m.Email == "dung@test.local"); // người nhận chưa nhận bất kỳ email nào
 
         // Giữa ân hạn vẫn chưa bàn giao.
         FakeClock.Advance(TimeSpan.FromDays(3));
@@ -191,16 +184,26 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
         FakeClock.Advance(TimeSpan.FromDays(4.1));
         await Tick();
         (await Owner()).State.ShouldBe(LifecycleState.Released);
-        notifier.Sent.ShouldContain(m => m.Email == "dung@test.local" && m.Subject.Contains("sẵn sàng"));
+        notifier.Sent.Count(m => m.Email == "dung@test.local" && m.Subject.Contains("sẵn sàng")).ShouldBe(1);
         notifier.Sent.ShouldNotContain(m => (m.Email == "binh@test.local" || m.Email == "chau@test.local") && m.Subject.Contains("sẵn sàng"));
 
+        // Lần đầu tiên người nhận được báo: email kèm link nhận. Chưa đăng nhập thì chưa lấy được gì.
+        var tokenDung = TokenFor("dung@test.local", "sẵn sàng");
+        var invitation = await S<ITrusteePortalAppService>().GetInvitationAsync(tokenDung);
+        invitation.Role.ShouldBe(TrusteeRole.Recipient);
+        invitation.IsDelivery.ShouldBeTrue();
         using (As(_trusteeUsers[2], "dung"))
         {
             var portal = S<ITrusteePortalAppService>();
+            // Chưa xác thực bằng link thì chưa vào được hộp nhận.
+            (await portal.GetAssignmentsAsync()).ShouldBeEmpty();
+            // Đăng nhập (đã tạo mật khẩu) + bấm link → gắn tài khoản; không cần khoá cá nhân nào.
+            (await portal.AcceptInvitationAsync(new AcceptInvitationInput { Token = tokenDung })).Phase.ShouldBe(TrusteePhase.Released);
+
             var inbox = await portal.GetInboxAsync(dungId);
-            inbox.SealedGrant.ShouldBe("grant-for-dung");
+            inbox.EncryptedGrant.ShouldBe("grant-for-dung");
+            inbox.DeliveryKey.ShouldBe(deliveryKey); // server giải mã khoá giao hàng và chỉ trao cho đúng người này, sau bàn giao
             inbox.GrantItemCount.ShouldBe(2);
-            (await portal.GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Released);
         }
         using (As(_trusteeUsers[0], "binh"))
         {

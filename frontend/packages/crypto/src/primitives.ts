@@ -30,6 +30,7 @@ export const Context = {
   ItemKey: 'dn:v1:item-key',
   Item: 'dn:v1:item',
   Allocation: 'dn:v1:allocation',
+  Grant: 'dn:v1:grant',
   Keyring: 'dn:v1:keyring',
 } as const;
 export type ContextName = (typeof Context)[keyof typeof Context];

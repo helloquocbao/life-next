@@ -4459,202 +4459,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/app/trustee-portal/keyring": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["TrusteePortal.KeyringDto"];
-                        "application/json": components["schemas"]["TrusteePortal.KeyringDto"];
-                        "text/json": components["schemas"]["TrusteePortal.KeyringDto"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Not Implemented */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["TrusteePortal.CreateKeyringInput"];
-                    "text/json": components["schemas"]["TrusteePortal.CreateKeyringInput"];
-                    "application/*+json": components["schemas"]["TrusteePortal.CreateKeyringInput"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["TrusteePortal.KeyringDto"];
-                        "application/json": components["schemas"]["TrusteePortal.KeyringDto"];
-                        "text/json": components["schemas"]["TrusteePortal.KeyringDto"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-                /** @description Not Implemented */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/app/trustee-portal/assignments": {
         parameters: {
             query?: never;
@@ -6657,22 +6461,14 @@ export interface components {
             trusteeId: string;
             response: components["schemas"]["Trustees.ContactResponse"];
         };
-        "TrusteePortal.CreateKeyringInput": {
-            publicKey: string;
-            encryptedPrivateKey: string;
-            kdfSalt: string;
-            /** Format: int64 */
-            kdfOpsLimit: number;
-            /** Format: int64 */
-            kdfMemLimit: number;
-        };
         "TrusteePortal.InboxDto": {
             /** Format: uuid */
             trusteeId: string;
             ownerName: string;
             /** Format: date-time */
             releasedAt: string;
-            sealedGrant?: string | null;
+            encryptedGrant?: string | null;
+            deliveryKey?: string | null;
             /** Format: int32 */
             grantItemCount: number;
         };
@@ -6681,16 +6477,7 @@ export interface components {
             trusteeName: string;
             role: components["schemas"]["Trustees.TrusteeRole"];
             relationship?: string | null;
-        };
-        "TrusteePortal.KeyringDto": {
-            exists: boolean;
-            publicKey?: string | null;
-            encryptedPrivateKey?: string | null;
-            kdfSalt?: string | null;
-            /** Format: int64 */
-            kdfOpsLimit: number;
-            /** Format: int64 */
-            kdfMemLimit: number;
+            isDelivery: boolean;
         };
         "TrusteePortal.ReleasedItemDto": {
             /** Format: uuid */
@@ -6780,6 +6567,7 @@ export interface components {
             /** Format: uuid */
             trusteeId: string;
             sealedPayload: string;
+            deliveryKey: string;
             /** Format: int32 */
             itemCount: number;
         };

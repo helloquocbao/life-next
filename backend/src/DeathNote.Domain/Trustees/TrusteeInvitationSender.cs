@@ -27,6 +27,29 @@ public class TrusteeInvitationSender : DomainService
         _urls = urls.Value;
     }
 
+    /// <summary>
+    /// Báo NGƯỜI NHẬN THÔNG TIN khi hồ sơ được bàn giao: email kèm link nhận. Người nhận mặc định không biết gì từ trước nên
+    /// link này đồng thời là cách duy nhất họ xác thực: bấm link → (chưa có tài khoản thì tạo mật khẩu, có rồi thì đăng nhập)
+    /// → thấy phần được bàn giao. Nếu họ đã gắn tài khoản từ trước thì chỉ cần link tới ứng dụng.
+    /// </summary>
+    public async Task SendDeliveryAsync(OwnerProfile owner, Trustee trustee, DateTime now)
+    {
+        string link;
+        if (trustee.Status == TrusteeStatus.Confirmed)
+        {
+            link = _urls.AppUrl;
+        }
+        else
+        {
+            var token = trustee.IssueInvitationToken(now);
+            await _trustees.UpdateAsync(trustee);
+            link = $"{_urls.AppUrl}/invite?token={Uri.EscapeDataString(token)}";
+        }
+        var (subject, body) = await _templates.TrusteeReleasedAsync(trustee.DisplayName, owner.DisplayName, link);
+        await _notifier.SendAsync(new NotificationMessage(trustee.DisplayName, trustee.Email, trustee.PhoneNumber, subject, body,
+            NotificationChannels.Email | NotificationChannels.Sms));
+    }
+
     public async Task SendAsync(OwnerProfile owner, Trustee trustee, DateTime now)
     {
         var token = trustee.IssueInvitationToken(now);
