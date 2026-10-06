@@ -1,23 +1,22 @@
 /**
  * Khung chính của Admin Console theo mockup Web Admin: SIDEBAR TỐI bên trái (menu nhóm theo mảng việc,
- * thẻ tài khoản ở đáy), HEADER (nút thu gọn + breadcrumb + lối tắt hồ sơ chờ), CONTENT ở giữa.
- * Drawer chi tiết mở từ bên phải trong từng trang.
+ * thẻ tài khoản ở đáy), HEADER (nút thu gọn + breadcrumb), CONTENT ở giữa.
  *
  * Menu được dựng từ `grantedPermissions` của `/admin-dashboard/profile`:
  * không có quyền nào → màn hình NoAccess (không render layout, không gọi API nghiệp vụ nào).
  */
 import { useMemo, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { Avatar, Badge, Button, Layout, Menu, Result, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd';
+import { Avatar, Button, Layout, Menu, Result, Space, Tag, Tooltip, Typography, type MenuProps } from 'antd';
 import {
-  AuditOutlined, DashboardOutlined, InboxOutlined, LogoutOutlined, MailOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  SafetyCertificateOutlined,
+  AuditOutlined, DashboardOutlined, IdcardOutlined, LogoutOutlined, MailOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+  KeyOutlined, SafetyCertificateOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { Brand, DemoBanner, FullPageSpin, errorMessage } from '@deathnote/ui';
 import type { AdminProfileDto } from '@deathnote/api';
 import { auth } from '../config';
-import { useProfile, useReleaseQueue } from '../lib/api-hooks';
-import { adminRoleColor, adminRoleLabel, hasPerm, Perm, type PermissionName } from '../lib/permissions';
+import { useProfile } from '../lib/api-hooks';
+import { hasPerm, Perm, roleColor, roleLabel, type PermissionName } from '../lib/permissions';
 import { NoAccess } from './NoAccess';
 
 const { Sider, Header, Content } = Layout;
@@ -25,19 +24,21 @@ const { Sider, Header, Content } = Layout;
 type NavItem = { key: string; label: string; icon: ReactNode; perm: PermissionName };
 type NavGroup = { label: string; items: NavItem[] };
 
-/** Menu chia theo mảng việc để người vận hành tìm đúng chỗ: xử lý hồ sơ / giám sát / cấu hình. */
+/** Menu chia theo mảng việc để người vận hành tìm đúng chỗ: vận hành / giám sát / cấu hình. */
 const NAV: NavGroup[] = [
   {
     label: 'Vận hành',
     items: [
       { key: '/dashboard', label: 'Tổng quan', icon: <DashboardOutlined />, perm: Perm.Dashboard },
-      { key: '/queue', label: 'Hàng chờ mở vault', icon: <InboxOutlined />, perm: Perm.Releases },
+      { key: '/customers', label: 'Khách hàng', icon: <TeamOutlined />, perm: Perm.Customers },
+      { key: '/staff', label: 'Nhân viên', icon: <IdcardOutlined />, perm: Perm.Staff },
     ],
   },
   { label: 'Giám sát', items: [{ key: '/audit', label: 'Audit log', icon: <AuditOutlined />, perm: Perm.AuditLog }] },
   {
     label: 'Cấu hình',
     items: [
+      { key: '/roles', label: 'Vai trò & quyền', icon: <KeyOutlined />, perm: Perm.Roles },
       { key: '/policy', label: 'Chính sách', icon: <SafetyCertificateOutlined />, perm: Perm.Policy },
       { key: '/email-templates', label: 'Mẫu email', icon: <MailOutlined />, perm: Perm.EmailTemplates },
     ],
@@ -55,12 +56,6 @@ export function AdminLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
-  const canQueue = hasPerm(profile, Perm.Releases);
-  // Badge "số hồ sơ chờ": chỉ cần totalCount của tab pending → xin 1 bản ghi cho nhẹ.
-  // Dùng chung chu kỳ làm mới 15s với hàng chờ.
-  const pendingQuery = useReleaseQueue('pending', 0, 1, canQueue);
-  const pendingCount = pendingQuery.data?.totalCount ?? 0;
-
   const groups = useMemo(
     () => (profile ? NAV.map((g) => ({ ...g, items: g.items.filter((i) => hasPerm(profile, i.perm)) })).filter((g) => g.items.length) : []),
     [profile],
@@ -71,15 +66,9 @@ export function AdminLayout() {
       type: 'group' as const,
       key: g.label,
       label: collapsed ? null : g.label,
-      children: g.items.map((i) => ({
-        key: i.key,
-        icon: i.icon,
-        label: i.key === '/queue' && pendingCount > 0
-          ? <span className="nav-label">{i.label}<Badge count={pendingCount} size="small" overflowCount={99} /></span>
-          : i.label,
-      })),
+      children: g.items.map((i) => ({ key: i.key, icon: i.icon, label: i.label })),
     })),
-    [groups, collapsed, pendingCount],
+    [groups, collapsed],
   );
 
   if (isLoading) return <FullPageSpin tip="Đang tải quyền truy cập…" />;
@@ -116,11 +105,6 @@ export function AdminLayout() {
               <span>{currentItem?.label ?? 'Không tìm thấy trang'}</span>
             </div>
           </Space>
-          {canQueue && pendingCount > 0 && selected !== '/queue' && (
-            <Button size="small" icon={<InboxOutlined />} onClick={() => navigate('/queue')}>
-              {pendingCount} hồ sơ chờ xử lý
-            </Button>
-          )}
         </Header>
         <DemoBanner timeScale={profile.timeScale} />
         <Content className="admin-content">
@@ -154,7 +138,7 @@ function UserCard({ profile, collapsed }: { profile: AdminProfileDto; collapsed:
       <div className="admin-user-info">
         <Typography.Text className="admin-user-name" ellipsis={{ tooltip: profile.userName }}>{name}</Typography.Text>
         <div className="admin-user-roles">
-          {profile.roles?.map((r) => <Tag key={r} color={adminRoleColor[r] ?? 'default'} variant="filled">{adminRoleLabel[r] ?? r}</Tag>)}
+          {profile.roles?.map((r) => <Tag key={r} color={roleColor(r)} variant="filled">{roleLabel(r)}</Tag>)}
         </div>
       </div>
       {logout}

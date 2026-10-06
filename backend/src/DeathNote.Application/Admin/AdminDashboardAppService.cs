@@ -2,7 +2,6 @@ using DeathNote.AuditTrail;
 using DeathNote.Lifecycle;
 using DeathNote.Owners;
 using DeathNote.Permissions;
-using DeathNote.Releases;
 using DeathNote.Vaults;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Authorization.Permissions;
@@ -17,10 +16,17 @@ public class AdminDashboardAppService : DeathNoteAppService, IAdminDashboardAppS
     private static readonly string[] AllPermissions =
     [
         DeathNotePermissions.Dashboard,
-        DeathNotePermissions.Releases.Default,
-        DeathNotePermissions.Releases.Evidence,
-        DeathNotePermissions.Releases.Review,
-        DeathNotePermissions.Releases.Approve,
+        DeathNotePermissions.Customers.Default,
+        DeathNotePermissions.Customers.ViewContact,
+        DeathNotePermissions.Staff.Default,
+        DeathNotePermissions.Staff.Create,
+        DeathNotePermissions.Staff.Update,
+        DeathNotePermissions.Staff.Lock,
+        DeathNotePermissions.Staff.ResetPassword,
+        DeathNotePermissions.Roles.Default,
+        DeathNotePermissions.Roles.Create,
+        DeathNotePermissions.Roles.Update,
+        DeathNotePermissions.Roles.Delete,
         DeathNotePermissions.AuditLog,
         DeathNotePermissions.Policy.Default,
         DeathNotePermissions.Policy.Manage,
@@ -29,19 +35,19 @@ public class AdminDashboardAppService : DeathNoteAppService, IAdminDashboardAppS
     ];
 
     private readonly IRepository<OwnerProfile, Guid> _owners;
-    private readonly IRepository<ReleaseRequest, Guid> _releases;
     private readonly IRepository<VaultItem, Guid> _items;
     private readonly IRepository<AuditEvent, Guid> _auditEvents;
     private readonly LifecyclePolicy _policy;
+    private readonly LifecyclePolicyStore _policyStore;
 
-    public AdminDashboardAppService(IRepository<OwnerProfile, Guid> owners, IRepository<ReleaseRequest, Guid> releases,
-        IRepository<VaultItem, Guid> items, IRepository<AuditEvent, Guid> auditEvents, LifecyclePolicy policy)
+    public AdminDashboardAppService(IRepository<OwnerProfile, Guid> owners, IRepository<VaultItem, Guid> items,
+        IRepository<AuditEvent, Guid> auditEvents, LifecyclePolicy policy, LifecyclePolicyStore policyStore)
     {
         _owners = owners;
-        _releases = releases;
         _items = items;
         _auditEvents = auditEvents;
         _policy = policy;
+        _policyStore = policyStore;
     }
 
     /// <summary>Thông tin + quyền của admin đang đăng nhập (dùng để dựng menu). Ai đăng nhập cũng gọi được.</summary>
@@ -64,25 +70,16 @@ public class AdminDashboardAppService : DeathNoteAppService, IAdminDashboardAppS
     public async Task<AdminDashboardDto> GetAsync()
     {
         var now = Clock.Now;
-        var sla = _policy.Days(_policy.Options.ReviewSlaDays);
         var owners = await _owners.GetQueryableAsync();
-        var releases = await _releases.GetQueryableAsync();
         var items = await _items.GetQueryableAsync();
 
         var stateCounts = await AsyncExecuter.ToListAsync(owners.GroupBy(o => o.State).Select(g => new { g.Key, Count = g.Count() }));
         int C(LifecycleState s) => stateCounts.FirstOrDefault(x => x.Key == s)?.Count ?? 0;
 
-        var reviewing = releases.Where(r => r.Status == ReleaseStatus.AwaitingFirstReview || r.Status == ReleaseStatus.AwaitingSecondReview);
-        var reviewTimes = await AsyncExecuter.ToListAsync(reviewing.Select(r => r.ReviewRequestedAt));
         var since = now.AddHours(-24);
 
         return new AdminDashboardDto
         {
-            PendingReviews = reviewTimes.Count,
-            SlaOverdue = reviewTimes.Count(t => t.HasValue && t.Value + sla < now),
-            NeedsMoreInfo = await AsyncExecuter.CountAsync(releases.Where(r => r.Status == ReleaseStatus.NeedsMoreInfo)),
-            InFinalWait = await AsyncExecuter.CountAsync(releases.Where(r => r.Status == ReleaseStatus.FinalWait)),
-            AwaitingConsent = await AsyncExecuter.CountAsync(releases.Where(r => r.Status == ReleaseStatus.AwaitingConsent)),
             OwnersActive = C(LifecycleState.Active),
             OwnersMissed = C(LifecycleState.Missed),
             OwnersInGrace = C(LifecycleState.Grace),
@@ -96,24 +93,39 @@ public class AdminDashboardAppService : DeathNoteAppService, IAdminDashboardAppS
     }
 
     [Authorize(DeathNotePermissions.Policy.Default)]
-    public Task<PolicyDto> GetPolicyAsync()
+    public Task<PolicyDto> GetPolicyAsync() => Task.FromResult(ToPolicyDto());
+
+    /// <summary>Chỉnh chính sách — lưu CSDL, có hiệu lực ngay, ghi audit (giá trị cũ → mới).</summary>
+    [Authorize(DeathNotePermissions.Policy.Manage)]
+    public async Task<PolicyDto> UpdatePolicyAsync(UpdatePolicyInput input)
+    {
+        var before = _policy.Snapshot();
+        var after = new EditablePolicy(input.MissedPhaseDays, input.ReminderChannels.Distinct().ToArray(), input.DefaultGraceDays,
+            input.MinGraceDays, input.MaxGraceDays, input.MaxPauseDays);
+        await _policyStore.SaveAsync(after);
+
+        await Audit.RecordAsync(new AuditEntry(AuditActions.PolicyUpdated, ActorType: AuditActorType.Admin, ActorUserId: UserId,
+            ActorName: CurrentUserDisplayName, Detail: $"{Describe(before)} → {Describe(after)}"));
+        return ToPolicyDto();
+    }
+
+    private static string Describe(EditablePolicy p) =>
+        $"Missed {p.MissedPhaseDays}n, kênh [{string.Join(",", p.ReminderChannels)}], ân hạn {p.MinGraceDays}–{p.DefaultGraceDays}–{p.MaxGraceDays}n, tạm dừng {p.MaxPauseDays}n";
+
+    private PolicyDto ToPolicyDto()
     {
         var o = _policy.Options;
-        return Task.FromResult(new PolicyDto
+        return new PolicyDto
         {
             MissedPhaseDays = o.MissedPhaseDays,
             ReminderChannels = o.ReminderChannels,
             DefaultGraceDays = o.DefaultGraceDays,
             MinGraceDays = o.MinGraceDays,
             MaxGraceDays = o.MaxGraceDays,
-            FinalWaitHours = o.FinalWaitHours,
-            ReviewSlaDays = o.ReviewSlaDays,
             MaxPauseDays = o.MaxPauseDays,
-            NewTrusteeRiskDays = o.NewTrusteeRiskDays,
-            EvidenceRetentionDays = o.EvidenceRetentionDays,
-            EnforceDistinctConsentIp = o.EnforceDistinctConsentIp,
             TimeScale = o.TimeScale,
-            AllowedCheckInIntervals = DeathNoteConsts.AllowedCheckInIntervals
-        });
+            AllowedCheckInIntervals = DeathNoteConsts.AllowedCheckInIntervals,
+            AvailableReminderChannels = LifecyclePolicyOptions.AvailableReminderChannels
+        };
     }
 }

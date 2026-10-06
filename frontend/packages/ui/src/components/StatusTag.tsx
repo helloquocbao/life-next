@@ -2,7 +2,7 @@ import { Tag } from 'antd';
 
 /**
  * Tag hiển thị nhãn + màu cho một giá trị enum, tra theo cặp bảng label/color dùng chung ở `labels.ts`
- * (VD `trusteeStatusLabel`/`trusteeStatusColor`, `releaseStatusLabel`/`releaseStatusColor`…).
+ * (VD `trusteeStatusLabel`/`trusteeStatusColor`, `lifecycleStateLabel`/`lifecycleStateColor`…).
  * Gom về một chỗ để nhãn và màu luôn đi cùng nhau — tránh trường hợp một nơi tự viết `<Tag>` tay và
  * quên đồng bộ khi bảng label/color đổi (đã từng xảy ra: ConsentSection.tsx tự suy màu tay, lệch với
  * `contactResponseLabel` dùng ở nơi khác).

@@ -2,10 +2,10 @@ using DeathNote.Authentication;
 using DeathNote.Data;
 using DeathNote.EntityFrameworkCore;
 using DeathNote.Infrastructure;
+using DeathNote.Lifecycle;
 using DeathNote.Notifications;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
@@ -16,8 +16,6 @@ using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Basic;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
-using Volo.Abp.BlobStoring;
-using Volo.Abp.BlobStoring.FileSystem;
 using Volo.Abp.Data;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
@@ -46,8 +44,7 @@ namespace DeathNote;
     typeof(AbpSwashbuckleModule),
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAccountHttpApiModule),
-    typeof(AbpAspNetCoreMvcUiBasicThemeModule),
-    typeof(AbpBlobStoringFileSystemModule)
+    typeof(AbpAspNetCoreMvcUiBasicThemeModule)
 )]
 public class DeathNoteHttpApiHostModule : AbpModule
 {
@@ -130,18 +127,6 @@ public class DeathNoteHttpApiHostModule : AbpModule
         {
             options.ConventionalControllers.Create(typeof(DeathNoteApplicationModule).Assembly);
         });
-
-        // Kho tệp bằng chứng: MVP lưu trên đĩa. Production chuyển sang S3/MinIO (Volo.Abp.BlobStoring.Minio/Aws).
-        Configure<AbpBlobStoringOptions>(options =>
-        {
-            options.Containers.ConfigureDefault(container =>
-            {
-                container.UseFileSystem(fs => fs.BasePath = Path.Combine(env.ContentRootPath, "App_Data", "blobs"));
-            });
-        });
-
-        // Cho phép upload bằng chứng tới 10 MB (+ phần overhead multipart).
-        Configure<FormOptions>(o => o.MultipartBodyLengthLimit = DeathNoteConsts.MaxEvidenceFileBytes + 1024 * 1024);
 
         context.Services.AddHttpContextAccessor();
         context.Services.AddTransient<IRequestContext, HttpRequestContext>();
@@ -237,14 +222,16 @@ public class DeathNoteHttpApiHostModule : AbpModule
         app.UseConfiguredEndpoints();
     }
 
-    /// <summary>Môi trường dev/demo: tự áp dụng migration và seed dữ liệu khi khởi động.</summary>
+    /// <summary>Tự migrate + seed nếu bật <c>App:MigrateOnStartup</c>, rồi nạp chính sách admin đã chỉnh từ CSDL.</summary>
     public override async Task OnPostApplicationInitializationAsync(ApplicationInitializationContext context)
     {
         var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
-        if (!configuration.GetValue<bool>("App:MigrateOnStartup")) return;
-
         using var scope = context.ServiceProvider.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<IDeathNoteDbSchemaMigrator>().MigrateAsync();
-        await scope.ServiceProvider.GetRequiredService<IDataSeeder>().SeedAsync();
+        if (configuration.GetValue<bool>("App:MigrateOnStartup"))
+        {
+            await scope.ServiceProvider.GetRequiredService<IDeathNoteDbSchemaMigrator>().MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<IDataSeeder>().SeedAsync();
+        }
+        await scope.ServiceProvider.GetRequiredService<LifecyclePolicyStore>().LoadAsync();
     }
 }

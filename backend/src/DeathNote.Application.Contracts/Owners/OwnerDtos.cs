@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using DeathNote.Lifecycle;
-using DeathNote.Releases;
 
 namespace DeathNote.Owners;
 
@@ -31,7 +30,6 @@ public class OwnerStatusDto
     public DateTime? GraceEndsAt { get; set; }
     public DateTime? PausedUntil { get; set; }
     public string? PauseReason { get; set; }
-    public OpenReleaseSummaryDto? OpenRelease { get; set; }
 
     // Tầng 2 — mức độ sẵn sàng
     public ReadinessDto Readiness { get; set; } = new();
@@ -54,18 +52,6 @@ public class OwnerStatusDto
     public DateTime ServerNow { get; set; }
     /// <summary>Hệ số nén thời gian (demo). Client quy đổi "ngày" hiển thị cho đúng.</summary>
     public double TimeScale { get; set; }
-}
-
-public class OpenReleaseSummaryDto
-{
-    public Guid Id { get; set; }
-    public ReleaseStatus Status { get; set; }
-    public ReleaseReason Reason { get; set; }
-    public string InitiatorName { get; set; } = default!;
-    public DateTime InitiatedAt { get; set; }
-    public int EffectiveConsents { get; set; }
-    public int RequiredConsents { get; set; }
-    public DateTime? FinalWaitUntil { get; set; }
 }
 
 /// <summary>Thanh "Mức độ sẵn sàng" + một việc nên làm tiếp.</summary>

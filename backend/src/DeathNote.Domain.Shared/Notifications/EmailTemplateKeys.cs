@@ -14,12 +14,7 @@ public static class EmailTemplateKeys
     public const string CheckInReminderFinal = "check-in-reminder-final";
     public const string TrusteeInvitation = "trustee-invitation";
     public const string TrusteeGraceAlert = "trustee-grace-alert";
-    public const string OwnerReleaseInitiated = "owner-release-initiated";
-    public const string OwnerFinalWarning = "owner-final-warning";
-    public const string TrusteeRequestOpened = "trustee-request-opened";
     public const string TrusteeCancelled = "trustee-cancelled";
-    public const string TrusteeRejected = "trustee-rejected";
-    public const string TrusteeNeedsInfo = "trustee-needs-info";
     public const string TrusteeReleased = "trustee-released";
 
     public const int MaxKeyLength = 64;

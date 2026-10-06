@@ -18,9 +18,6 @@ public static class DeathNoteConsts
     /// <summary>Giới hạn kích thước 1 hạng mục vault đã mã hoá (bao gồm tệp đính kèm nhỏ) cho MVP: 8 MB.</summary>
     public const int MaxVaultItemCiphertextLength = 8 * 1024 * 1024;
 
-    /// <summary>Giới hạn 1 tệp bằng chứng (giấy chứng tử, giấy nhập viện…): 10 MB.</summary>
-    public const long MaxEvidenceFileBytes = 10 * 1024 * 1024;
-
     /// <summary>Các nhịp check-in owner được chọn (ngày) — đúng như tài liệu thiết kế.</summary>
     public static readonly int[] AllowedCheckInIntervals = [7, 14, 30, 90];
 

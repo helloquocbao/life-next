@@ -33,23 +33,8 @@ public class NotificationTemplates : ITransientDependency
         R(EmailTemplateKeys.TrusteeGraceAlert, ("trusteeName", trusteeName), ("ownerName", ownerName), ("silentDays", silentDays.ToString()),
             ("graceDays", graceDays.ToString()), ("link", link));
 
-    public Task<(string Subject, string Body)> OwnerReleaseInitiatedAsync(string ownerName, string link) =>
-        R(EmailTemplateKeys.OwnerReleaseInitiated, ("ownerName", ownerName), ("link", link));
-
-    public Task<(string Subject, string Body)> OwnerFinalWarningAsync(string ownerName, DateTime until, string link) =>
-        R(EmailTemplateKeys.OwnerFinalWarning, ("ownerName", ownerName), ("releaseAt", until.ToString("HH:mm dd/MM/yyyy")), ("link", link));
-
-    public Task<(string Subject, string Body)> TrusteeRequestOpenedAsync(string trusteeName, string ownerName, string link) =>
-        R(EmailTemplateKeys.TrusteeRequestOpened, ("trusteeName", trusteeName), ("ownerName", ownerName), ("link", link));
-
     public Task<(string Subject, string Body)> TrusteeCancelledAsync(string trusteeName, string ownerName) =>
         R(EmailTemplateKeys.TrusteeCancelled, ("trusteeName", trusteeName), ("ownerName", ownerName));
-
-    public Task<(string Subject, string Body)> TrusteeRejectedAsync(string trusteeName, string ownerName, string? note, string link) =>
-        R(EmailTemplateKeys.TrusteeRejected, ("trusteeName", trusteeName), ("ownerName", ownerName), ("note", note ?? "chưa đủ bằng chứng"), ("link", link));
-
-    public Task<(string Subject, string Body)> TrusteeNeedsInfoAsync(string trusteeName, string ownerName, string? note, string link) =>
-        R(EmailTemplateKeys.TrusteeNeedsInfo, ("trusteeName", trusteeName), ("ownerName", ownerName), ("note", note), ("link", link));
 
     public Task<(string Subject, string Body)> TrusteeReleasedAsync(string trusteeName, string ownerName, string link) =>
         R(EmailTemplateKeys.TrusteeReleased, ("trusteeName", trusteeName), ("ownerName", ownerName), ("link", link));

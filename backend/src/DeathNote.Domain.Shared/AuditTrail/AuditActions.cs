@@ -36,18 +36,17 @@ public static class AuditActions
     public const string RemindersNotified = "lifecycle.reminders_notified";
     public const string AutoReleased = "lifecycle.auto_released";
 
-    public const string ReleaseInitiated = "release.initiated";
-    public const string ReleaseConsented = "release.consented";
-    public const string EvidenceUploaded = "release.evidence_uploaded";
-    public const string EvidenceViewed = "release.evidence_viewed";
-    public const string EvidencePurged = "release.evidence_purged";
-    public const string ReviewVoteCast = "release.review_vote";
-    public const string ReleaseFinalWaitStarted = "release.final_wait_started";
-    public const string ReleaseCompleted = "release.completed";
-    public const string ReleaseRejected = "release.rejected";
-    public const string ReleaseCancelled = "release.cancelled";
+    // Các hành động "release.*" của luồng mở vault thủ công cũ (khởi tạo, đồng thuận, bằng chứng, phiếu duyệt…) đã bỏ;
+    // chuỗi cũ vẫn còn trong log lịch sử và vẫn có nhãn hiển thị ở admin console.
     public const string ReleasedDataAccessed = "release.data_accessed";
 
     public const string EmailTemplateUpdated = "admin.email_template_updated";
     public const string EmailTemplateReset = "admin.email_template_reset";
+    public const string PolicyUpdated = "admin.policy_updated";
+    public const string StaffCreated = "admin.staff_created";
+    public const string StaffUpdated = "admin.staff_updated";
+    public const string RoleCreated = "admin.role_created";
+    public const string RoleUpdated = "admin.role_updated";
+    public const string RoleDeleted = "admin.role_deleted";
+    public const string CustomerContactViewed = "admin.customer_contact_viewed";
 }

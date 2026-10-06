@@ -3,17 +3,12 @@ namespace DeathNote.Lifecycle;
 /// <summary>
 /// Vòng đời của một hồ sơ owner — trái tim của sản phẩm.
 /// <code>
-///  Active ──quá hạn check-in──▶ Missed ──hết các lần nhắc──▶ Grace
-///    ▲                             │                           │ trustee khởi tạo yêu cầu
-///    │◀──────── owner check-in / huỷ (1 chạm, mọi giai đoạn) ──┤
-///    │                                                         ▼
-///    │                 FinalWait ◀──admin duyệt 2 phiếu── Review ◀──đủ m-of-n── Verifying
-///    │                     │ hết thời gian chờ cuối
-///    │                     ▼
-///    │                 Released (không thể quay lại)
+///  Active ──quá hạn check-in──▶ Missed ──hết các lần nhắc──▶ Grace ──hết ân hạn──▶ Released
+///    ▲                                                         │                (không thể quay lại)
+///    └──────── owner check-in / huỷ (1 chạm, mọi giai đoạn) ───┘
 /// </code>
-/// Nguyên tắc số 1: "Không heartbeat ≠ đã mất". Hết heartbeat chỉ mở quy trình xác minh,
-/// KHÔNG mở dữ liệu. Chỉ có đúng một đường đi tới <see cref="Released"/>.
+/// Nguyên tắc số 1: "Không heartbeat ≠ đã mất". Chỉ khi owner im lặng suốt giai đoạn nhắc VÀ hết thời gian
+/// ân hạn mới tự động bàn giao. Chỉ có đúng một đường đi tới <see cref="Released"/>.
 /// </summary>
 public enum LifecycleState
 {
@@ -23,12 +18,7 @@ public enum LifecycleState
     Missed = 1,
     /// <summary>Hết các lần nhắc. Người được uỷ quyền được báo "hãy liên lạc với owner".</summary>
     Grace = 2,
-    /// <summary>Một trustee đã khởi tạo yêu cầu mở; đang thu đồng thuận m-of-n + bằng chứng.</summary>
-    Verifying = 3,
-    /// <summary>Đã đủ ngưỡng đồng thuận; đội thẩm định PICO duyệt 2 phiếu độc lập.</summary>
-    Review = 4,
-    /// <summary>Đã duyệt; chờ 48–72 giờ cuối, bắn cảnh báo tối đa về owner — chốt chặn cuối cùng.</summary>
-    FinalWait = 5,
-    /// <summary>Đã bàn giao: mảnh khoá được phát cho trustee để tự giải mã phần của mình.</summary>
+    // 3–5 (Verifying/Review/FinalWait) thuộc luồng mở vault thủ công cũ — đã bỏ. Giữ nguyên số của Released vì lưu trong CSDL.
+    /// <summary>Đã bàn giao: người nhận tự giải mã phần thông tin được phân cho mình.</summary>
     Released = 6
 }

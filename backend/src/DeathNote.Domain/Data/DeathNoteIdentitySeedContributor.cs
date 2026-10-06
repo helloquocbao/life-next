@@ -7,6 +7,8 @@ using Volo.Abp.Guids;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Authorization.Permissions;
+using Volo.Abp.SettingManagement;
+using DeathNote.Settings;
 
 namespace DeathNote.Data;
 
@@ -23,10 +25,13 @@ public class DeathNoteIdentitySeedContributor : IDataSeedContributor, ITransient
     private readonly IPermissionDataSeeder _permissionSeeder;
     private readonly IGuidGenerator _guid;
     private readonly IConfiguration _configuration;
+    private readonly ISettingManager _settings;
 
     public DeathNoteIdentitySeedContributor(IdentityRoleManager roleManager, IdentityUserManager userManager,
-        IIdentityRoleRepository roleRepository, IPermissionDataSeeder permissionSeeder, IGuidGenerator guid, IConfiguration configuration)
+        IIdentityRoleRepository roleRepository, IPermissionDataSeeder permissionSeeder, IGuidGenerator guid, IConfiguration configuration,
+        ISettingManager settings)
     {
+        _settings = settings;
         _roleManager = roleManager;
         _userManager = userManager;
         _roleRepository = roleRepository;
@@ -37,19 +42,13 @@ public class DeathNoteIdentitySeedContributor : IDataSeedContributor, ITransient
 
     public async Task SeedAsync(DataSeedContext context)
     {
-        
-        await SeedRoleAsync(DeathNoteConsts.Roles.Support,
-            DeathNotePermissions.Dashboard, DeathNotePermissions.Releases.Default);
-        await SeedRoleAsync(DeathNoteConsts.Roles.Reviewer,
-            DeathNotePermissions.Dashboard, DeathNotePermissions.Releases.Default, DeathNotePermissions.Releases.Evidence,
-            DeathNotePermissions.Releases.Review, DeathNotePermissions.AuditLog);
-        await SeedRoleAsync(DeathNoteConsts.Roles.Approver,
-            DeathNotePermissions.Dashboard, DeathNotePermissions.Releases.Default, DeathNotePermissions.Releases.Evidence,
-            DeathNotePermissions.Releases.Approve, DeathNotePermissions.AuditLog);
-        await SeedRoleAsync(DeathNoteConsts.Roles.Compliance,
-            DeathNotePermissions.Dashboard, DeathNotePermissions.Releases.Default, DeathNotePermissions.Releases.Evidence,
-            DeathNotePermissions.AuditLog, DeathNotePermissions.Policy.Default, DeathNotePermissions.EmailTemplates.Default);
-
+        // Vai trò mặc định chỉ seed MỘT lần cho mỗi CSDL. Sau đó vai trò là dữ liệu của admin (màn hình "Vai trò"):
+        // xoá hay đổi tên vai trò mặc định sẽ không bị tạo lại khi khởi động.
+        if (await _settings.GetOrNullGlobalAsync(DeathNoteSettings.DefaultRolesSeeded) != "true")
+        {
+            await SeedDefaultRolesAsync();
+            await _settings.SetGlobalAsync(DeathNoteSettings.DefaultRolesSeeded, "true");
+        }
 
         if (!_configuration.GetValue<bool>("DeathNote:SeedDemoUsers")) return;
 
@@ -64,13 +63,28 @@ public class DeathNoteIdentitySeedContributor : IDataSeedContributor, ITransient
         await SeedUserAsync("trustee3", "Luật sư Đỗ Dũng", "trustee3@deathnote.local", password, null);
     }
 
+    private async Task SeedDefaultRolesAsync()
+    {
+        await SeedRoleAsync(DeathNoteConsts.Roles.Support, DeathNotePermissions.Dashboard, DeathNotePermissions.Customers.Default);
+        await SeedRoleAsync(DeathNoteConsts.Roles.Reviewer,
+            DeathNotePermissions.Dashboard, DeathNotePermissions.Customers.Default, DeathNotePermissions.AuditLog);
+        await SeedRoleAsync(DeathNoteConsts.Roles.Approver,
+            DeathNotePermissions.Dashboard, DeathNotePermissions.Customers.Default, DeathNotePermissions.AuditLog);
+        await SeedRoleAsync(DeathNoteConsts.Roles.Compliance,
+            DeathNotePermissions.Dashboard, DeathNotePermissions.Customers.Default, DeathNotePermissions.Staff.Default,
+            DeathNotePermissions.Roles.Default, DeathNotePermissions.AuditLog, DeathNotePermissions.Policy.Default,
+            DeathNotePermissions.EmailTemplates.Default);
+    }
+
+    /// <summary>
+    /// Chỉ cấp quyền mặc định khi vai trò được tạo LẦN ĐẦU. Vai trò đã có thì giữ nguyên quyền admin đã chỉnh ở màn hình
+    /// "Vai trò" — nếu seed lại mỗi lần khởi động, quyền admin vừa gỡ sẽ tự quay về.
+    /// </summary>
     private async Task SeedRoleAsync(string roleName, params string[] permissions)
     {
-        if (await _roleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant()) == null)
-        {
-            var role = new IdentityRole(_guid.Create(), roleName) { IsPublic = true };
-            (await _roleManager.CreateAsync(role)).CheckErrors();
-        }
+        if (await _roleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant()) != null) return;
+        var role = new IdentityRole(_guid.Create(), roleName) { IsPublic = true };
+        (await _roleManager.CreateAsync(role)).CheckErrors();
         await _permissionSeeder.SeedAsync(RolePermissionValueProvider.ProviderName, roleName, permissions);
     }
 
@@ -80,6 +94,8 @@ public class DeathNoteIdentitySeedContributor : IDataSeedContributor, ITransient
         var user = new IdentityUser(_guid.Create(), userName, email) { Name = name };
         user.SetEmailConfirmed(true);
         (await _userManager.CreateAsync(user, password)).CheckErrors();
-        if (role != null) (await _userManager.AddToRoleAsync(user, role)).CheckErrors();
+        // Vai trò có thể đã bị admin xoá — khi đó tạo tài khoản demo không kèm vai trò.
+        if (role != null && await _roleRepository.FindByNormalizedNameAsync(role.ToUpperInvariant()) != null)
+            (await _userManager.AddToRoleAsync(user, role)).CheckErrors();
     }
 }

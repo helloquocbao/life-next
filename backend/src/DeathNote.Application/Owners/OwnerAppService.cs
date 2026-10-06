@@ -1,7 +1,6 @@
 using DeathNote.AuditTrail;
 using DeathNote.Common;
 using DeathNote.Lifecycle;
-using DeathNote.Releases;
 using DeathNote.Security;
 using DeathNote.Trustees;
 using DeathNote.Vaults;
@@ -30,7 +29,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
     private readonly IRepository<Vault, Guid> _vaults;
     private readonly IRepository<VaultItem, Guid> _items;
     private readonly IRepository<Trustee, Guid> _trustees;
-    private readonly IRepository<ReleaseRequest, Guid> _releases;
     private readonly IRepository<AuditEvent, Guid> _auditEvents;
     private readonly LifecycleManager _lifecycle;
     private readonly LifecyclePolicy _policy;
@@ -43,7 +41,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         IRepository<Vault, Guid> vaults,
         IRepository<VaultItem, Guid> items,
         IRepository<Trustee, Guid> trustees,
-        IRepository<ReleaseRequest, Guid> releases,
         IRepository<AuditEvent, Guid> auditEvents,
         LifecycleManager lifecycle,
         LifecyclePolicy policy,
@@ -55,7 +52,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         _vaults = vaults;
         _items = items;
         _trustees = trustees;
-        _releases = releases;
         _auditEvents = auditEvents;
         _lifecycle = lifecycle;
         _policy = policy;
@@ -93,8 +89,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
         var lastItemUpdate = itemCount == 0 ? (DateTime?)null
             : await AsyncExecuter.MaxAsync(itemQuery, i => i.LastModificationTime ?? i.CreationTime);
         var trustees = await _trustees.GetListAsync(t => t.OwnerId == owner.Id);
-        var open = await _releases.FirstOrDefaultAsync(r => r.OwnerId == owner.Id && r.Status != ReleaseStatus.Released
-            && r.Status != ReleaseStatus.Rejected && r.Status != ReleaseStatus.CancelledByOwner);
 
         var dto = new OwnerStatusDto
         {
@@ -134,23 +128,6 @@ public class OwnerAppService : DeathNoteAppService, IOwnerAppService
             var remaining = _policy.ReminderSteps - owner.RemindersSent;
             var from = owner.LastReminderAt ?? Clock.Now;
             dto.TrusteesNotifiedAt = from + TimeSpan.FromTicks(_policy.ReminderInterval.Ticks * (remaining + 1));
-        }
-
-        if (open != null)
-        {
-            var initiator = trustees.FirstOrDefault(t => t.Id == open.InitiatorTrusteeId);
-            var detailed = await _releases.GetWithDetailsAsync(open.Id, AsyncExecuter);
-            dto.OpenRelease = new OpenReleaseSummaryDto
-            {
-                Id = open.Id,
-                Status = open.Status,
-                Reason = open.Reason,
-                InitiatorName = initiator?.DisplayName ?? "?",
-                InitiatedAt = open.InitiatedAt,
-                EffectiveConsents = detailed.EffectiveConsentCount(_policy.Options.EnforceDistinctConsentIp),
-                RequiredConsents = open.RequiredConsents,
-                FinalWaitUntil = open.FinalWaitUntil
-            };
         }
 
         dto.Readiness = BuildReadiness(dto, trustees);
