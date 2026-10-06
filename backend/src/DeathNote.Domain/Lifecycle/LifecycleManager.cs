@@ -2,7 +2,6 @@ using DeathNote.AuditTrail;
 using DeathNote.Infrastructure;
 using DeathNote.Notifications;
 using DeathNote.Owners;
-using DeathNote.Releases;
 using DeathNote.Trustees;
 using DeathNote.Vaults;
 using Microsoft.Extensions.Logging;
@@ -22,7 +21,6 @@ public class LifecycleManager : DomainService
     private readonly IRepository<OwnerProfile, Guid> _owners;
     private readonly IRepository<Heartbeat, Guid> _heartbeats;
     private readonly IRepository<Trustee, Guid> _trustees;
-    private readonly IRepository<ReleaseRequest, Guid> _releases;
     private readonly IRepository<Grant, Guid> _grants;
     private readonly LifecyclePolicy _policy;
     private readonly AuditTrailManager _audit;
@@ -37,7 +35,6 @@ public class LifecycleManager : DomainService
         IRepository<OwnerProfile, Guid> owners,
         IRepository<Heartbeat, Guid> heartbeats,
         IRepository<Trustee, Guid> trustees,
-        IRepository<ReleaseRequest, Guid> releases,
         IRepository<Grant, Guid> grants,
         LifecyclePolicy policy,
         AuditTrailManager audit,
@@ -51,7 +48,6 @@ public class LifecycleManager : DomainService
         _owners = owners;
         _heartbeats = heartbeats;
         _trustees = trustees;
-        _releases = releases;
         _grants = grants;
         _policy = policy;
         _audit = audit;
@@ -93,16 +89,6 @@ public class LifecycleManager : DomainService
 
     private async Task HandleVetoAsync(OwnerProfile owner, LifecycleState previous, DateTime now)
     {
-        var open = await _releases.FirstOrDefaultAsync(r => r.OwnerId == owner.Id &&
-            r.Status != ReleaseStatus.Released && r.Status != ReleaseStatus.Rejected && r.Status != ReleaseStatus.CancelledByOwner);
-        if (open != null)
-        {
-            open.CancelByOwner(now);
-            await _releases.UpdateAsync(open);
-            await _audit.RecordAsync(new AuditEntry(AuditActions.ReleaseCancelled, owner.Id, ActorType: AuditActorType.Owner,
-                ActorUserId: owner.Id, ActorName: owner.DisplayName, TargetType: nameof(ReleaseRequest), TargetId: open.Id.ToString()));
-        }
-
         await _audit.RecordAsync(new AuditEntry(AuditActions.OwnerVeto, owner.Id, ActorType: AuditActorType.Owner,
             ActorUserId: owner.Id, ActorName: owner.DisplayName, Detail: $"Huỷ tiến trình từ trạng thái {previous}"));
 

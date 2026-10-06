@@ -104,44 +104,11 @@ public static partial class EmailTemplateDefinitions
             + "<p>Nếu trong <b>{{graceDays}} ngày</b> tới {{ownerName}} vẫn không xác nhận, hệ thống sẽ tự động gửi thông tin {{ownerName}} đã chuẩn bị cho những người nhận.</p>"
             + Button("Mở Death Note")),
 
-        new(EmailTemplateKeys.OwnerReleaseInitiated, "Cảnh báo chủ hồ sơ — có yêu cầu mở",
-            "Gửi chủ hồ sơ khi một trustee khởi tạo yêu cầu mở hồ sơ.",
-            [OwnerName, Link],
-            "Cảnh báo: người thân đang yêu cầu mở hồ sơ của bạn",
-            "<p>Chào {{ownerName}},</p><p>Một người được uỷ quyền vừa khởi tạo yêu cầu mở hồ sơ vì không liên lạc được với bạn.</p>"
-            + "<p>Nếu bạn vẫn ổn, chỉ cần check-in — toàn bộ tiến trình sẽ bị huỷ ngay lập tức.</p>" + Button("Tôi vẫn ổn — huỷ ngay")),
-
-        new(EmailTemplateKeys.OwnerFinalWarning, "Cảnh báo cuối cho chủ hồ sơ",
-            "Gửi chủ hồ sơ khi yêu cầu mở đã được duyệt và bắt đầu thời gian chờ cuối.",
-            [OwnerName, new("releaseAt", "Thời điểm bàn giao (UTC)", "08:00 05/10/2026"), Link],
-            "CẢNH BÁO CUỐI: hồ sơ của bạn sắp được bàn giao",
-            "<p>Chào {{ownerName}},</p><p>Yêu cầu mở hồ sơ đã được thẩm định. Nếu bạn không phản hồi, dữ liệu sẽ được bàn giao cho người thân vào <b>{{releaseAt}} (UTC)</b>.</p>"
-            + Button("Tôi vẫn ổn — huỷ ngay")),
-
-        new(EmailTemplateKeys.TrusteeRequestOpened, "Báo trustee — cần xác nhận yêu cầu mở",
-            "Gửi các trustee khác khi có người khởi tạo yêu cầu mở.",
-            [TrusteeName, OwnerName, Link],
-            "Có yêu cầu mở hồ sơ của {{ownerName}} — cần bạn xác nhận",
-            "<p>Chào {{trusteeName}},</p><p>Một người được uỷ quyền khác đã khởi tạo yêu cầu mở hồ sơ của {{ownerName}}. Hồ sơ chỉ được mở khi đủ số người đồng thuận, qua thẩm định và thời gian chờ cuối.</p>"
-            + Button("Xem và xác nhận")),
-
         new(EmailTemplateKeys.TrusteeCancelled, "Báo trustee — chủ hồ sơ an toàn",
             "Gửi trustee khi chủ hồ sơ check-in lại, mọi tiến trình bị huỷ.",
             [TrusteeName, OwnerName],
             "{{ownerName}} đã xác nhận an toàn",
             "<p>Chào {{trusteeName}},</p><p>{{ownerName}} vừa xác thực và xác nhận vẫn ổn. Mọi tiến trình cảnh báo/xác minh đã được huỷ. Bạn không cần làm gì thêm.</p>"),
-
-        new(EmailTemplateKeys.TrusteeRejected, "Báo trustee — yêu cầu bị từ chối",
-            "Gửi trustee khi đội thẩm định không chấp thuận yêu cầu mở.",
-            [TrusteeName, OwnerName, Note, Link],
-            "Yêu cầu mở hồ sơ của {{ownerName}} chưa được chấp thuận",
-            "<p>Chào {{trusteeName}},</p><p>Đội thẩm định chưa chấp thuận yêu cầu. Lý do: {{note}}.</p>" + Button("Xem chi tiết")),
-
-        new(EmailTemplateKeys.TrusteeNeedsInfo, "Báo trustee — cần bổ sung bằng chứng",
-            "Gửi trustee khi thẩm định viên yêu cầu bổ sung bằng chứng.",
-            [TrusteeName, OwnerName, Note, Link],
-            "Cần bổ sung bằng chứng cho hồ sơ của {{ownerName}}",
-            "<p>Chào {{trusteeName}},</p><p>Thẩm định viên yêu cầu bổ sung: {{note}}</p>" + Button("Bổ sung ngay")),
 
         new(EmailTemplateKeys.TrusteeReleased, "Báo trustee — dữ liệu đã bàn giao",
             "Gửi người nhận thông tin khi hồ sơ được bàn giao (lần đầu họ được báo). Link: tạo mật khẩu nếu chưa có tài khoản, đăng nhập nếu đã có.",

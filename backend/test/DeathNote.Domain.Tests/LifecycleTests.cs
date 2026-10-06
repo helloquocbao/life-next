@@ -96,9 +96,6 @@ public class LifecycleTests
     [Theory]
     [InlineData(LifecycleState.Missed)]
     [InlineData(LifecycleState.Grace)]
-    [InlineData(LifecycleState.Verifying)]
-    [InlineData(LifecycleState.Review)]
-    [InlineData(LifecycleState.FinalWait)]
     public void Check_in_is_a_veto_from_any_state_before_release(LifecycleState target)
     {
         var o = DriveTo(target);
@@ -112,8 +109,8 @@ public class LifecycleTests
     [Fact]
     public void Released_is_terminal()
     {
-        var o = DriveTo(LifecycleState.FinalWait);
-        o.MarkReleased(T0.AddDays(100));
+        var o = DriveTo(LifecycleState.Grace);
+        o.ReleaseAutomatically(T0.AddDays(100));
         Should.Throw<BusinessException>(() => o.CheckIn(T0.AddDays(101), Policy)).Code.ShouldBe(DeathNoteErrorCodes.AlreadyReleased);
     }
 
@@ -121,8 +118,8 @@ public class LifecycleTests
     public void Cannot_skip_states()
     {
         var o = NewOwner();
-        Should.Throw<BusinessException>(() => o.EnterVerifying(T0));
-        Should.Throw<BusinessException>(() => o.MarkReleased(T0));
+        Should.Throw<BusinessException>(() => o.EnterGrace(T0));
+        Should.Throw<BusinessException>(() => o.ReleaseAutomatically(T0));
     }
 
     [Fact]
@@ -151,12 +148,6 @@ public class LifecycleTests
         if (target == LifecycleState.Missed) return o;
         for (var i = 0; i < 4; i++) { o.RegisterReminderSent(now); now = now.AddDays(2); }
         o.EnterGrace(now);
-        if (target == LifecycleState.Grace) return o;
-        o.EnterVerifying(now.AddDays(8));
-        if (target == LifecycleState.Verifying) return o;
-        o.EnterReview(now.AddDays(9));
-        if (target == LifecycleState.Review) return o;
-        o.EnterFinalWait(now.AddDays(10));
         return o;
     }
 }

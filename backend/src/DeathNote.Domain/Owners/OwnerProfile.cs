@@ -236,53 +236,9 @@ public class OwnerProfile : FullAuditedAggregateRoot<Guid>
         ChangeState(LifecycleState.Released, now);
     }
 
-    /// <summary>Mốc mà từ đó trustee được phép khởi tạo yêu cầu mở (hết thời gian ân hạn).</summary>
+    /// <summary>Mốc hết thời gian ân hạn — từ đây hồ sơ tự động bàn giao cho người nhận.</summary>
     public DateTime? GraceEndsAt(LifecyclePolicy policy) =>
         GraceStartedAt.HasValue ? GraceStartedAt.Value + policy.Days(GraceDays) : null;
-
-    /// <summary>Cổng THỜI GIAN: đang Grace và đã hết thời gian ân hạn.</summary>
-    public bool CanAcceptReleaseRequest(DateTime now, LifecyclePolicy policy) =>
-        State == LifecycleState.Grace && GraceEndsAt(policy) is { } end && now >= end;
-
-    /// <summary>Grace → Verifying: một trustee đã khởi tạo yêu cầu mở.</summary>
-    public void EnterVerifying(DateTime now)
-    {
-        EnsureState(LifecycleState.Grace);
-        ChangeState(LifecycleState.Verifying, now);
-    }
-
-    /// <summary>Verifying → Review: đã đủ ngưỡng đồng thuận m-of-n.</summary>
-    public void EnterReview(DateTime now)
-    {
-        EnsureState(LifecycleState.Verifying);
-        ChangeState(LifecycleState.Review, now);
-    }
-
-    /// <summary>Review → FinalWait: đội thẩm định đã duyệt đủ 2 phiếu.</summary>
-    public void EnterFinalWait(DateTime now)
-    {
-        EnsureState(LifecycleState.Review);
-        ChangeState(LifecycleState.FinalWait, now);
-    }
-
-    /// <summary>FinalWait → Released: hết thời gian chờ cuối mà owner không phủ quyết. Không thể đảo ngược.</summary>
-    public void MarkReleased(DateTime now)
-    {
-        EnsureState(LifecycleState.FinalWait);
-        ChangeState(LifecycleState.Released, now);
-    }
-
-    /// <summary>
-    /// Yêu cầu mở bị từ chối → hồ sơ quay lại Grace (owner vẫn đang im lặng, nhưng dữ liệu vẫn khoá).
-    /// Trustee có thể khởi tạo yêu cầu mới với bằng chứng đầy đủ hơn.
-    /// </summary>
-    public void ReturnToGrace(DateTime now)
-    {
-        if (State is LifecycleState.Verifying or LifecycleState.Review or LifecycleState.FinalWait)
-        {
-            ChangeState(LifecycleState.Grace, now);
-        }
-    }
 
     // =====================================================================
     //  Nội bộ

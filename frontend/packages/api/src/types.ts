@@ -9,7 +9,6 @@ type S = components['schemas'];
 // Owner
 export type OwnerStatusDto = S['Owners.OwnerStatusDto'];
 export type ReadinessCheckDto = S['Owners.ReadinessCheckDto'];
-export type OpenReleaseSummaryDto = S['Owners.OpenReleaseSummaryDto'];
 export type CompleteOnboardingInput = S['Owners.CompleteOnboardingInput'];
 export type CheckInResultDto = S['Owners.CheckInResultDto'];
 export type CheckInByLinkResultDto = S['Owners.CheckInByLinkResultDto'];
@@ -38,14 +37,17 @@ export type ReleasedItemDto = S['TrusteePortal.ReleasedItemDto'];
 // Admin
 export type AdminProfileDto = S['Admin.AdminProfileDto'];
 export type AdminDashboardDto = S['Admin.AdminDashboardDto'];
-export type ReleaseQueueItemDto = S['Admin.ReleaseQueueItemDto'];
-export type ReleaseCaseDto = S['Admin.ReleaseCaseDto'];
-export type GateDto = S['Admin.GateDto'];
-export type TimelineEntryDto = S['Admin.TimelineEntryDto'];
-export type RiskFlagDto = S['Admin.RiskFlagDto'];
-export type ReviewVoteDto = S['Admin.ReviewVoteDto'];
 export type ChainVerificationDto = S['Admin.ChainVerificationDto'];
 export type PolicyDto = S['Admin.PolicyDto'];
+export type UpdatePolicyInput = S['Admin.UpdatePolicyInput'];
+export type CustomerDto = S['Admin.CustomerDto'];
+export type CustomerContactDto = S['Admin.CustomerContactDto'];
+export type StaffDto = S['Admin.StaffDto'];
+export type CreateStaffInput = S['Admin.CreateStaffInput'];
+export type UpdateStaffInput = S['Admin.UpdateStaffInput'];
+export type RoleDto = S['Admin.RoleDto'];
+export type PermissionItemDto = S['Admin.PermissionItemDto'];
+export type SaveRoleInput = S['Admin.SaveRoleInput'];
 export type EmailTemplateDto = S['EmailTemplates.EmailTemplateDto'];
 export type EmailTemplatePlaceholderDto = S['EmailTemplates.EmailTemplatePlaceholderDto'];
 export type UpdateEmailTemplateInput = S['EmailTemplates.UpdateEmailTemplateInput'];
@@ -57,7 +59,7 @@ export type EmailDeliveryInfoDto = S['EmailTemplates.EmailDeliveryInfoDto'];
 //  PHẢI khớp thứ tự với enum C# trong DeathNote.Domain.Shared.
 // ---------------------------------------------------------------------------
 
-export const LifecycleState = { Active: 0, Missed: 1, Grace: 2, Verifying: 3, Review: 4, FinalWait: 5, Released: 6 } as const;
+export const LifecycleState = { Active: 0, Missed: 1, Grace: 2, Released: 6 } as const;
 export type LifecycleState = S['Lifecycle.LifecycleState'];
 
 export const CheckInChannel = { MobileApp: 0, Web: 1, EmailLink: 2, SmsLink: 3 } as const;
@@ -75,30 +77,6 @@ export type ContactResponse = S['Trustees.ContactResponse'];
 
 export const TrusteePhase = { Normal: 0, Alert: 1, Released: 2 } as const;
 export type TrusteePhase = S['TrusteePortal.TrusteePhase'];
-
-export const ReleaseReason = { LostContact: 0, Hospitalized: 1, Accident: 2, Deceased: 3 } as const;
-export type ReleaseReason = S['Releases.ReleaseReason'];
-
-export const ReleaseStatus = {
-  AwaitingConsent: 0,
-  AwaitingFirstReview: 1,
-  AwaitingSecondReview: 2,
-  NeedsMoreInfo: 3,
-  FinalWait: 4,
-  Released: 5,
-  Rejected: 6,
-  CancelledByOwner: 7,
-} as const;
-export type ReleaseStatus = S['Releases.ReleaseStatus'];
-
-export const ReviewDecision = { Approve: 0, RequestMoreInfo: 1, Reject: 2 } as const;
-export type ReviewDecision = S['Releases.ReviewDecision'];
-
-export const EvidenceKind = { DeathCertificate: 0, HospitalRecord: 1, IdentityDocument: 2, SignedStatement: 3, Other: 9 } as const;
-export type EvidenceKind = S['Releases.EvidenceKind'];
-
-export const RiskSeverity = { Low: 0, Medium: 1, High: 2 } as const;
-export type RiskSeverity = S['Releases.RiskSeverity'];
 
 export const AuditActorType = { System: 0, Owner: 1, Trustee: 2, Admin: 3, Anonymous: 4 } as const;
 export type AuditActorType = S['AuditTrail.AuditActorType'];

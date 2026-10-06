@@ -1,13 +1,11 @@
 /**
- * Dashboard vận hành — bức tranh tổng quát cho trưởng ca thẩm định.
+ * Dashboard vận hành — bức tranh tổng quát của hệ thống.
  *
  * NGUYÊN TẮC: chỉ số liệu tổng hợp (đếm, tổng dung lượng), không danh tính khách hàng, không nội dung két.
- * - Hàng thẻ trên cùng: khối lượng việc của đội thẩm định (chờ duyệt, quá SLA, cần bổ sung, chờ cuối, thu đồng thuận).
  * - Phân bố trạng thái owner: thanh ngang vẽ bằng CSS (monorepo không có thư viện biểu đồ).
  * - Metadata két: tổng số hạng mục + dung lượng ciphertext — PICO không biết bên trong là gì.
  */
 import { Card, Col, Row, Skeleton, Statistic, Typography } from 'antd';
-import { AlertOutlined, ClockCircleOutlined, FileSearchOutlined, HourglassOutlined, TeamOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { ErrorAlert, colors, formatBytes, lifecycleStateLabel } from '@deathnote/ui';
 import type { LifecycleState } from '@deathnote/api';
@@ -16,7 +14,7 @@ import { PageTitle } from '../components/PageTitle';
 
 /** Màu thanh theo mức độ "nóng" của trạng thái: xanh (bình thường) → hổ phách → đỏ gạch. */
 const stateBarColor: Record<LifecycleState, string> = {
-  0: colors.primary, 1: '#d9a73a', 2: colors.amber, 3: '#c9703a', 4: '#c45f3a', 5: colors.red, 6: '#8a969b',
+  0: colors.primary, 1: '#d9a73a', 2: colors.amber, 6: '#8a969b',
 };
 
 export function DashboardPage() {
@@ -32,28 +30,6 @@ export function DashboardPage() {
       <ErrorAlert error={error} style={{ marginBottom: 16 }} />
       {isLoading ? <Skeleton active paragraph={{ rows: 8 }} /> : data && (
         <>
-          <h2 className="section-heading">Khối lượng thẩm định</h2>
-          <div className="kpi-grid">
-            {[
-              { title: 'Chờ thẩm định', value: data.pendingReviews, icon: <FileSearchOutlined />, hint: 'Cần phiếu 1 hoặc phiếu 2', tone: 'warn' },
-              { title: 'Quá SLA', value: data.slaOverdue, icon: <AlertOutlined />, hint: 'Ưu tiên xử lý ngay', tone: 'danger' },
-              { title: 'Cần bổ sung bằng chứng', value: data.needsMoreInfo, icon: <ClockCircleOutlined />, hint: 'Đang chờ trustee nộp thêm', tone: 'warn' },
-              { title: 'Đang chờ cuối', value: data.inFinalWait, icon: <HourglassOutlined />, hint: 'Owner vẫn có thể huỷ', tone: undefined },
-              { title: 'Đang thu đồng thuận', value: data.awaitingConsent, icon: <TeamOutlined />, hint: 'Chưa đủ m-of-n trustee', tone: undefined },
-            ].map((s) => (
-              // Chỉ tô màu khi thực sự có việc — thẻ bằng 0 giữ màu trung tính để mắt không bị kéo nhầm chỗ.
-              <button key={s.title} type="button" onClick={() => navigate('/queue')}
-                className={'kpi-card' + ((s.value ?? 0) > 0 && s.tone ? ` ${s.tone}` : '')}>
-                <div className="kpi-head">
-                  <span className="kpi-label">{s.title}</span>
-                  <span className="kpi-icon">{s.icon}</span>
-                </div>
-                <span className="kpi-value">{s.value ?? 0}</span>
-                <span className="kpi-hint">{s.hint}</span>
-              </button>
-            ))}
-          </div>
-
           <div className="dash-grid">
             <div>
               <h2 className="section-heading">Hồ sơ owner</h2>

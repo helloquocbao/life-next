@@ -6,7 +6,6 @@ using DeathNote.EntityFrameworkCore;
 using DeathNote.Lifecycle;
 using DeathNote.Notifications;
 using DeathNote.Owners;
-using DeathNote.Releases;
 using DeathNote.Trustees;
 using DeathNote.TrusteePortal;
 using DeathNote.Vaults;
@@ -280,41 +279,6 @@ public class FullLifecycleTests : AbpIntegratedTest<DeathNoteApplicationTestModu
         using (As(reminderUser, "lan"))
             (await S<ITrusteePortalAppService>().GetAssignmentsAsync()).Single().Phase.ShouldBe(TrusteePhase.Normal);
         _ = reminderTrusteeId;
-    }
-
-    [Fact]
-    public async Task Owner_check_in_vetoes_an_open_release_request()
-    {
-        // Dựng nhanh tới Verifying bằng domain rồi để owner check-in qua app service.
-        var ownerId = Guid.NewGuid();
-        using (As(ownerId, "binh"))
-        {
-            await S<IOwnerAppService>().CompleteOnboardingAsync(new CompleteOnboardingInput { DisplayName = "Bình", CheckInIntervalDays = 7, GraceDays = 7 });
-        }
-        await InUow(async () =>
-        {
-            var owners = S<IRepository<OwnerProfile, Guid>>();
-            var o = await owners.GetAsync(ownerId);
-            var now = FakeClock.Current.AddDays(8);
-            o.MarkMissed(now);
-            o.EnterGrace(now);
-            o.EnterVerifying(now);
-            await owners.UpdateAsync(o);
-            await S<IRepository<ReleaseRequest, Guid>>().InsertAsync(new ReleaseRequest(Guid.NewGuid(), ownerId, Guid.NewGuid(), ReleaseReason.LostContact, null, 2, 1, now));
-        });
-
-        using (As(ownerId, "binh"))
-        {
-            var result = await S<IOwnerAppService>().CheckInAsync(new CheckInInput());
-            result.WasVeto.ShouldBeTrue();
-            result.PreviousState.ShouldBe(LifecycleState.Verifying);
-            (await S<IOwnerAppService>().GetStatusAsync()).State.ShouldBe(LifecycleState.Active);
-        }
-        await InUow(async () =>
-        {
-            var request = await S<IRepository<ReleaseRequest, Guid>>().FirstAsync(r => r.OwnerId == ownerId);
-            request.Status.ShouldBe(ReleaseStatus.CancelledByOwner);
-        });
     }
 
     /// <summary>

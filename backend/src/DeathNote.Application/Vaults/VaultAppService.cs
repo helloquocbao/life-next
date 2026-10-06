@@ -2,7 +2,6 @@ using DeathNote.AuditTrail;
 using DeathNote.Common;
 using DeathNote.Lifecycle;
 using DeathNote.Owners;
-using DeathNote.Releases;
 using DeathNote.Trustees;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -25,12 +24,11 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
     private readonly IRepository<Trustee, Guid> _trustees;
     private readonly IRepository<KeyShare, Guid> _keyShares;
     private readonly IRepository<Grant, Guid> _grants;
-    private readonly IRepository<ReleaseRequest, Guid> _releases;
     private readonly GrantEscrow _escrow;
 
     public VaultAppService(IRepository<Vault, Guid> vaults, IRepository<VaultItem, Guid> items, IRepository<OwnerProfile, Guid> owners,
         IRepository<Trustee, Guid> trustees, IRepository<KeyShare, Guid> keyShares, IRepository<Grant, Guid> grants,
-        IRepository<ReleaseRequest, Guid> releases, GrantEscrow escrow)
+        GrantEscrow escrow)
     {
         _vaults = vaults;
         _items = items;
@@ -38,7 +36,6 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
         _trustees = trustees;
         _keyShares = keyShares;
         _grants = grants;
-        _releases = releases;
         _escrow = escrow;
     }
 
@@ -140,12 +137,6 @@ public class VaultAppService : DeathNoteAppService, IVaultAppService
     public async Task AbandonAsync()
     {
         var vault = await GetVaultAsync();
-        // Không cho từ bỏ két khi đang có yêu cầu mở dở dang — tránh xoá dữ liệu ngay khi người thân
-        // đang thực sự cần (dù trường hợp này hiếm vì owner mất mật khẩu không cản trở check-in).
-        if (await _releases.AnyAsync(r => r.OwnerId == UserId && r.Status != ReleaseStatus.Released
-                                          && r.Status != ReleaseStatus.Rejected && r.Status != ReleaseStatus.CancelledByOwner))
-            throw new BusinessException(DeathNoteErrorCodes.ReleaseAlreadyOpen);
-
         // QUAN TRỌNG: Vault và VaultItem kế thừa FullAuditedAggregateRoot ⇒ có ISoftDelete. DeleteAsync
         // thường sẽ chỉ đánh dấu IsDeleted=true (giữ nguyên hàng trong bảng để phục vụ audit thông thường),
         // KHÔNG xoá vật lý. Với Vault, Id = OwnerId cố định — nếu chỉ soft-delete, hàng cũ vẫn chiếm khoá

@@ -1,13 +1,13 @@
 /**
  * Tên quyền của Admin Console — PHẢI khớp `DeathNotePermissions.cs` ở backend.
  *
- * Ma trận phân quyền nội bộ (theo tài liệu thiết kế):
- *   Role        | Xem hồ sơ          | Duyệt   | Chính sách | Audit
- *   Support     | Có (ẩn bằng chứng) | Không   | Không      | Không
- *   Reviewer    | Có                 | Phiếu 1 | Không      | Có
- *   Approver    | Có                 | Phiếu 2 | Không      | Có
- *   Compliance  | Có                 | Không   | Xem        | Toàn bộ
- *   Super admin | Có                 | KHÔNG   | Quản lý    | Toàn bộ
+ * Phân quyền MẶC ĐỊNH khi vai trò được tạo lần đầu — sau đó admin chỉnh ở màn hình "Vai trò":
+ *   Role        | Dashboard | Khách hàng | Nhân viên | Chính sách | Audit
+ *   Support     | Có        | Xem        | Không     | Không      | Không
+ *   Reviewer    | Có        | Xem        | Không     | Không      | Có
+ *   Approver    | Có        | Xem        | Không     | Không      | Có
+ *   Compliance  | Có        | Xem        | Xem       | Xem        | Toàn bộ
+ *   Super admin | Có        | Xem        | Quản lý   | Chỉnh sửa  | Toàn bộ
  *
  * Lưu ý: ẩn menu/nút ở frontend chỉ để trải nghiệm gọn gàng — backend mới là nơi thực thi quyền.
  */
@@ -15,12 +15,20 @@ import type { AdminProfileDto } from '@deathnote/api';
 
 export const Perm = {
   Dashboard: 'DeathNote.Dashboard',
-  Releases: 'DeathNote.Releases',
-  Evidence: 'DeathNote.Releases.Evidence',
-  Review: 'DeathNote.Releases.Review',
-  Approve: 'DeathNote.Releases.Approve',
+  Customers: 'DeathNote.Customers',
+  CustomersViewContact: 'DeathNote.Customers.ViewContact',
+  Staff: 'DeathNote.Staff',
+  StaffCreate: 'DeathNote.Staff.Create',
+  StaffUpdate: 'DeathNote.Staff.Update',
+  StaffLock: 'DeathNote.Staff.Lock',
+  StaffResetPassword: 'DeathNote.Staff.ResetPassword',
+  Roles: 'DeathNote.Roles',
+  RolesCreate: 'DeathNote.Roles.Create',
+  RolesUpdate: 'DeathNote.Roles.Update',
+  RolesDelete: 'DeathNote.Roles.Delete',
   AuditLog: 'DeathNote.AuditLog',
   Policy: 'DeathNote.Policy',
+  PolicyManage: 'DeathNote.Policy.Manage',
   EmailTemplates: 'DeathNote.EmailTemplates',
   EmailTemplatesManage: 'DeathNote.EmailTemplates.Manage',
 } as const;
@@ -31,7 +39,7 @@ export function hasPerm(profile: AdminProfileDto | undefined, permission: Permis
   return !!profile?.grantedPermissions?.includes(permission);
 }
 
-/** Nhãn tiếng Việt cho vai trò nội bộ (tên role ở backend: DeathNoteConsts.Roles). */
+/** Nhãn tiếng Việt cho các vai trò mặc định; vai trò admin tự tạo hiển thị đúng tên đã đặt (xem `roleLabel`). */
 export const adminRoleLabel: Record<string, string> = {
   support: 'Hỗ trợ',
   reviewer: 'Thẩm định viên',
@@ -47,3 +55,6 @@ export const adminRoleColor: Record<string, string> = {
   compliance: 'purple',
   admin: 'magenta',
 };
+
+export const roleLabel = (name: string) => adminRoleLabel[name] ?? name;
+export const roleColor = (name: string) => adminRoleColor[name] ?? 'cyan';

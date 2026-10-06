@@ -36,8 +36,6 @@ body { -webkit-font-smoothing: antialiased; }
 }
 .admin-menu .ant-menu-item { border-radius: 8px; margin-inline: 10px; width: calc(100% - 20px); }
 .admin-menu .ant-menu-item-selected { box-shadow: inset 3px 0 0 #6FB3A8; font-weight: 600; }
-.nav-label { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
-.nav-label .ant-badge-count { box-shadow: none; }
 
 .admin-user { display: flex; align-items: center; gap: 10px; padding: 14px 14px 14px 16px; border-top: 1px solid var(--sider-line); }
 .admin-user.collapsed { flex-direction: column; padding: 12px 0; gap: 6px; }
@@ -73,26 +71,7 @@ body { -webkit-font-smoothing: antialiased; }
 .section-heading { font-family: inherit !important; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.kpi-card {
-  display: flex; flex-direction: column; gap: 10px; text-align: left; cursor: pointer; font: inherit; color: inherit;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
-  transition: border-color .15s, box-shadow .15s;
-}
-.kpi-card:hover { border-color: #C9C2B0; box-shadow: 0 2px 8px rgba(28, 28, 26, .06); }
-.kpi-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.kpi-label { font-size: 13px; color: var(--muted); font-weight: 500; }
-.kpi-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); font-size: 15px; }
-.kpi-value { font-family: 'Lora', Georgia, serif; font-size: 34px; font-weight: 600; line-height: 1; }
-.kpi-hint { font-size: 12px; color: var(--muted); }
-.kpi-card.warn { border-color: #E9D3A6; background: var(--amber-soft); }
-.kpi-card.warn .kpi-icon { background: #F3E2BC; color: var(--amber); }
-.kpi-card.warn .kpi-value { color: var(--amber); }
-.kpi-card.danger { border-color: #ECC8C1; background: var(--red-soft); }
-.kpi-card.danger .kpi-icon { background: #F2D3CD; color: var(--red); }
-.kpi-card.danger .kpi-value { color: var(--red); }
-.dash-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 12px; margin-top: 24px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 12px; align-items: start; }
 .dash-side { display: flex; flex-direction: column; gap: 12px; }
 @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
 
@@ -101,18 +80,8 @@ body { -webkit-font-smoothing: antialiased; }
 .state-bar-track { height: 10px; border-radius: 5px; background: var(--line-soft); overflow: hidden; }
 .state-bar-fill { height: 100%; border-radius: 5px; transition: width .3s; min-width: 0; }
 
-/* ── Hàng chờ & hồ sơ ──────────────────────────────────────────────────── */
-.queue-table .ant-table-row { cursor: pointer; }
-.queue-table .row-overdue > td { background: #fdf5f3; }
-.gate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.gate-cell { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fff; }
-.gate-cell.passed { border-color: #bcd8cf; background: #f3f8f6; }
-.gate-cell.failed { border-color: #ecc8c1; background: #fcf3f1; }
-.zk-note { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.case-section { margin-bottom: 16px; }
-.case-section .ant-card-head { min-height: 40px; }
-.evidence-preview { width: 100%; height: 70vh; border: 0; }
-.evidence-preview-img { max-width: 100%; max-height: 70vh; display: block; margin: 0 auto; }
+/* Vai trò: cây quyền trong form */
+.role-permission-tree { border: 1px solid var(--line); border-radius: 8px; padding: 8px 4px; max-height: 360px; overflow: auto; }
 
 /* Mẫu email: danh sách | trình soạn | xem trước */
 .email-templates { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 12px; align-items: start; }

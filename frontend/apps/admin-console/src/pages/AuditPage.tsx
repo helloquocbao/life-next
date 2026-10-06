@@ -1,12 +1,14 @@
 /**
  * AUDIT LOG toàn hệ thống — bằng chứng cho kiểm toán bên thứ ba rằng mọi thao tác đều được ghi lại.
  *
- * - Phân trang server, mới nhất trước (theo Seq giảm dần). Lọc: tiền tố hành động + OwnerId.
+ * - Phân trang server, mới nhất trước (theo Seq giảm dần). Lọc: tiền tố hành động + OwnerId
+ *   (`?ownerId=` trên URL — trang Khách hàng mở sẵn bộ lọc này).
  * - "Kiểm tra toàn vẹn chuỗi": backend tính lại chuỗi băm SHA-256 (mỗi sự kiện chứa hash của sự kiện trước)
  *   và báo vị trí gãy đầu tiên nếu có ai sửa/xoá bản ghi. Ở tầng CSDL, trigger append-only chặn UPDATE/DELETE.
  * - "Xuất CSV": xuất đúng trang đang xem (không tải toàn bộ log về trình duyệt).
  */
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Alert, Button, Input, Select, Space, Table, Tag, Tooltip, Typography, type TableColumnsType } from 'antd';
 import { DownloadOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import type { AuditActorType, AuditEventDto } from '@deathnote/api';
@@ -20,7 +22,8 @@ const ACTION_PREFIXES = [
   { value: 'vault.', label: 'vault. — Két dữ liệu (metadata)' },
   { value: 'trustee.', label: 'trustee. — Người được uỷ quyền' },
   { value: 'lifecycle.', label: 'lifecycle. — Vòng đời' },
-  { value: 'release.', label: 'release. — Yêu cầu mở' },
+  { value: 'release.', label: 'release. — Bàn giao / luồng mở cũ' },
+  { value: 'admin.', label: 'admin. — Thao tác của nhân viên' },
 ];
 
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -30,8 +33,10 @@ export function AuditPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [action, setAction] = useState<string | undefined>();
-  const [ownerInput, setOwnerInput] = useState('');
-  const [ownerId, setOwnerId] = useState<string | undefined>();
+  const [searchParams] = useSearchParams();
+  const initialOwner = searchParams.get('ownerId') ?? '';
+  const [ownerInput, setOwnerInput] = useState(initialOwner);
+  const [ownerId, setOwnerId] = useState<string | undefined>(GUID_RE.test(initialOwner) ? initialOwner : undefined);
   const ownerInvalid = !!ownerInput.trim() && !GUID_RE.test(ownerInput.trim());
 
   const { data, isLoading, isFetching, error } = useAuditLog((page - 1) * pageSize, pageSize, action, ownerId);

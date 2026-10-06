@@ -29,7 +29,19 @@ public class LifecyclePolicy : ISingletonDependency
     /// <summary>Khoảng cách giữa hai vòng nhắc liên tiếp.</summary>
     public TimeSpan ReminderInterval => Days((double)Options.MissedPhaseDays / ReminderSteps);
 
-    public TimeSpan FinalWait => Hours(Options.FinalWaitHours);
-
     public bool IsDemoMode => Options.TimeScale > 1;
+
+    /// <summary>Áp dụng các tham số admin vừa chỉnh (hoặc vừa nạp từ CSDL) — có hiệu lực ngay cho mọi request/worker.</summary>
+    public void Apply(EditablePolicy p)
+    {
+        Options.MissedPhaseDays = p.MissedPhaseDays;
+        Options.ReminderChannels = p.ReminderChannels;
+        Options.DefaultGraceDays = p.DefaultGraceDays;
+        Options.MinGraceDays = p.MinGraceDays;
+        Options.MaxGraceDays = p.MaxGraceDays;
+        Options.MaxPauseDays = p.MaxPauseDays;
+    }
+
+    public EditablePolicy Snapshot() => new(Options.MissedPhaseDays, Options.ReminderChannels, Options.DefaultGraceDays,
+        Options.MinGraceDays, Options.MaxGraceDays, Options.MaxPauseDays);
 }

@@ -5,18 +5,23 @@
  * Không có hook nào đọc nội dung két: backend không cung cấp API đó cho admin (zero-knowledge).
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { unwrap, type AdminProfileDto, type EmailTemplateDto, type ReleaseCaseDto, type UpdateEmailTemplateInput } from '@deathnote/api';
+import {
+  unwrap, type AdminProfileDto, type CreateStaffInput, type EmailTemplateDto, type LifecycleState, type PolicyDto, type UpdateEmailTemplateInput,
+  type SaveRoleInput, type UpdatePolicyInput, type UpdateStaffInput,
+} from '@deathnote/api';
 import { parseUtc } from '@deathnote/ui';
 import { api } from '../config';
-import type { CastVoteInput, QueueTab } from './types';
 
 export const qk = {
   profile: ['admin', 'profile'] as const,
   dashboard: ['admin', 'dashboard'] as const,
   policy: ['admin', 'policy'] as const,
-  queue: (tab: QueueTab, skip: number, take: number) => ['admin', 'queue', tab, skip, take] as const,
-  queueAll: ['admin', 'queue'] as const,
-  case: (id: string) => ['admin', 'case', id] as const,
+  customers: (skip: number, take: number, filter?: string, state?: LifecycleState) => ['admin', 'customers', skip, take, filter, state] as const,
+  staff: (skip: number, take: number, filter?: string, role?: string) => ['admin', 'staff', skip, take, filter, role] as const,
+  staffAll: ['admin', 'staff'] as const,
+  assignableRoles: ['admin', 'assignable-roles'] as const,
+  roles: ['admin', 'roles'] as const,
+  permissionCatalog: ['admin', 'permission-catalog'] as const,
   emailTemplates: ['admin', 'email-templates'] as const,
   emailDelivery: ['admin', 'email-delivery'] as const,
   emailPreview: (key: string, subject: string, bodyHtml: string) => ['admin', 'email-preview', key, subject, bodyHtml] as const,
@@ -50,7 +55,7 @@ export const useDashboard = (enabled: boolean) =>
     refetchInterval: 30_000,
   });
 
-/** Chính sách vòng đời (read-only). Chỉ gọi khi có quyền DeathNote.Policy — nếu không backend trả 403. */
+/** Chính sách vòng đời. Chỉ gọi khi có quyền DeathNote.Policy — nếu không backend trả 403. */
 export const usePolicy = (enabled: boolean) =>
   useQuery({
     queryKey: qk.policy,
@@ -59,44 +64,91 @@ export const usePolicy = (enabled: boolean) =>
     staleTime: 10 * 60_000,
   });
 
-/**
- * Hàng chờ mở vault — phân trang phía server, tự làm mới ~15 giây để người duyệt thấy hồ sơ mới
- * (trong chế độ demo thời gian nén, hồ sơ chuyển trạng thái rất nhanh).
- */
-export const useReleaseQueue = (tab: QueueTab, skip: number, take: number, enabled = true) =>
-  useQuery({
-    queryKey: qk.queue(tab, skip, take),
-    queryFn: () =>
-      unwrap(api.GET('/api/app/release-review/queue', { params: { query: { Tab: tab, SkipCount: skip, MaxResultCount: take } } })),
-    enabled,
-    refetchInterval: 15_000,
-    placeholderData: keepPreviousData, // chuyển trang không nháy bảng trống
-  });
-
-/** Hồ sơ chi tiết (5 khối). Tự làm mới 15 giây để thấy đồng thuận/bằng chứng mới khi đang mở drawer. */
-export const useReleaseCase = (id: string | undefined) =>
-  useQuery({
-    queryKey: qk.case(id ?? ''),
-    queryFn: () => unwrap(api.GET('/api/app/release-review/{id}', { params: { path: { id: id! } } })),
-    enabled: !!id,
-    refetchInterval: 15_000,
-  });
-
-/**
- * Bỏ phiếu thẩm định/phê duyệt (quy tắc 4 mắt được backend thực thi).
- * Thành công: ghi đè cache hồ sơ bằng bản mới server trả về + làm mới hàng chờ và dashboard.
- */
-export function useCastVote(id: string) {
+/** Lưu chính sách (quyền DeathNote.Policy.Manage) — có hiệu lực ngay, không cần duyệt. */
+export function useUpdatePolicy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CastVoteInput) =>
-      unwrap(api.POST('/api/app/release-review/{id}/vote', { params: { path: { id } }, body })),
-    onSuccess: (updated: ReleaseCaseDto) => {
-      qc.setQueryData(qk.case(id), updated);
-      void qc.invalidateQueries({ queryKey: qk.queueAll });
-      void qc.invalidateQueries({ queryKey: qk.dashboard });
-    },
+    mutationFn: (body: UpdatePolicyInput) => unwrap(api.PUT('/api/app/admin-dashboard/policy', { body })),
+    onSuccess: (updated: PolicyDto) => qc.setQueryData(qk.policy, updated),
   });
+}
+
+/** Danh sách khách hàng (owner) — phân trang server, tìm theo tên/email/SĐT, lọc theo trạng thái. */
+export const useCustomers = (skip: number, take: number, filter?: string, state?: LifecycleState) =>
+  useQuery({
+    queryKey: qk.customers(skip, take, filter, state),
+    queryFn: () =>
+      unwrap(api.GET('/api/app/admin-customer', {
+        params: { query: { SkipCount: skip, MaxResultCount: take, Filter: filter || undefined, State: state } },
+      })),
+    placeholderData: keepPreviousData,
+  });
+
+/**
+ * Email & SĐT đầy đủ của một khách hàng (quyền Customers.ViewContact). Là mutation, không cache: mỗi lần bấm "xem"
+ * là một lần backend ghi audit — đúng với thao tác người dùng chủ động.
+ */
+export const useRevealContact = () =>
+  useMutation({
+    mutationFn: (id: string) => unwrap(api.GET('/api/app/admin-customer/{id}/contact', { params: { path: { id } } })),
+  });
+
+/** Danh sách nhân viên + vai trò. */
+export const useStaff = (skip: number, take: number, filter?: string, role?: string) =>
+  useQuery({
+    queryKey: qk.staff(skip, take, filter, role),
+    queryFn: () =>
+      unwrap(api.GET('/api/app/admin-staff', {
+        params: { query: { SkipCount: skip, MaxResultCount: take, Filter: filter || undefined, Role: role || undefined } },
+      })),
+    placeholderData: keepPreviousData,
+  });
+
+/** Thêm hoặc sửa nhân viên (quyền DeathNote.Staff.Manage). Xong thì làm mới danh sách. */
+export function useSaveStaff(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateStaffInput | UpdateStaffInput) =>
+      id
+        ? unwrap(api.PUT('/api/app/admin-staff/{id}', { params: { path: { id } }, body: body as UpdateStaffInput }))
+        : unwrap(api.POST('/api/app/admin-staff', { body: body as CreateStaffInput })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.staffAll }),
+  });
+}
+
+/** Tên các vai trò gán được cho nhân viên (form + bộ lọc trang Nhân viên). */
+export const useAssignableRoles = () =>
+  useQuery({ queryKey: qk.assignableRoles, queryFn: () => unwrap(api.GET('/api/app/admin-staff/assignable-roles')) });
+
+/** Danh sách vai trò kèm số nhân viên và quyền đã cấp. */
+export const useRoles = () => useQuery({ queryKey: qk.roles, queryFn: () => unwrap(api.GET('/api/app/admin-role')) });
+
+/** Cây quyền của console (không đổi lúc chạy → cache lâu). */
+export const usePermissionCatalog = () =>
+  useQuery({ queryKey: qk.permissionCatalog, queryFn: () => unwrap(api.GET('/api/app/admin-role/permissions')), staleTime: Infinity });
+
+/** Tạo / sửa vai trò. Xong thì làm mới vai trò, danh sách vai trò gán được, nhân viên và quyền của chính mình. */
+export function useSaveRole(id: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveRoleInput) =>
+      id
+        ? unwrap(api.PUT('/api/app/admin-role/{id}', { params: { path: { id } }, body }))
+        : unwrap(api.POST('/api/app/admin-role', { body })),
+    onSuccess: () => invalidateRoleData(qc),
+  });
+}
+
+export function useDeleteRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/api/app/admin-role/{id}', { params: { path: { id } } })),
+    onSuccess: () => invalidateRoleData(qc),
+  });
+}
+
+function invalidateRoleData(qc: ReturnType<typeof useQueryClient>) {
+  for (const key of [qk.roles, qk.assignableRoles, qk.staffAll, qk.profile]) void qc.invalidateQueries({ queryKey: key });
 }
 
 /** Audit log toàn hệ thống — phân trang server, lọc theo tiền tố hành động và OwnerId. */
@@ -105,7 +157,7 @@ export const useAuditLog = (skip: number, take: number, action?: string, ownerId
     queryKey: qk.audit(skip, take, action, ownerId),
     queryFn: () =>
       unwrap(api.GET('/api/app/admin-audit', {
-        params: { query: { SkipCount: skip, MaxResultCount: take, Action: action || undefined, OwnerId: ownerId || undefined } },
+        params: { query: { SkipCount: skip, MaxResultCount: take, ActionPrefix: action || undefined, OwnerId: ownerId || undefined } },
       })),
     enabled,
     placeholderData: keepPreviousData,

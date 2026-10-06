@@ -2,7 +2,7 @@
  * Chặn trang theo quyền + chọn trang mặc định sau khi đăng nhập.
  *
  * Trang chủ `/` chuyển tới trang đầu tiên người dùng có quyền theo thứ tự ưu tiên
- * Dashboard → Hàng chờ → Audit log → Chính sách (vd. tài khoản chỉ có quyền audit sẽ vào thẳng Audit log).
+ * Dashboard → Khách hàng → Nhân viên → Audit log → Vai trò → Chính sách → Mẫu email (vd. tài khoản chỉ có quyền audit sẽ vào thẳng Audit log).
  */
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router';
@@ -13,9 +13,12 @@ import { hasPerm, Perm, type PermissionName } from '../lib/permissions';
 
 const HOME_ORDER: { permission: PermissionName; path: string }[] = [
   { permission: Perm.Dashboard, path: '/dashboard' },
-  { permission: Perm.Releases, path: '/queue' },
+  { permission: Perm.Customers, path: '/customers' },
+  { permission: Perm.Staff, path: '/staff' },
   { permission: Perm.AuditLog, path: '/audit' },
+  { permission: Perm.Roles, path: '/roles' },
   { permission: Perm.Policy, path: '/policy' },
+  { permission: Perm.EmailTemplates, path: '/email-templates' },
 ];
 
 export function HomeRedirect() {

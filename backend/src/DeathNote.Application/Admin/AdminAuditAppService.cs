@@ -24,7 +24,7 @@ public class AdminAuditAppService : DeathNoteAppService, IAdminAuditAppService
     {
         var query = await _events.GetQueryableAsync();
         if (input.OwnerId.HasValue) query = query.Where(e => e.OwnerId == input.OwnerId);
-        if (!string.IsNullOrWhiteSpace(input.Action)) query = query.Where(e => e.Action.StartsWith(input.Action));
+        if (!string.IsNullOrWhiteSpace(input.ActionPrefix)) query = query.Where(e => e.Action.StartsWith(input.ActionPrefix));
         var total = await AsyncExecuter.LongCountAsync(query);
         var page = await AsyncExecuter.ToListAsync(query.OrderByDescending(e => e.Sequence).Skip(input.SkipCount).Take(input.MaxResultCount));
         return new PagedResultDto<AuditEventDto>(total, page.Select(e => e.ToDto()).ToList());

@@ -28,17 +28,9 @@ public static class DeathNoteErrorCodes
     public const string NotATrustee = "DeathNote:02005";
 
     public const string ReleaseNotAllowedInState = "DeathNote:03001";
-    public const string ReleaseAlreadyOpen = "DeathNote:03002";
-    public const string AlreadyConsented = "DeathNote:03003";
-    public const string OnlyKeyHoldersCanConsent = "DeathNote:03004";
     public const string InvalidShareDeliveries = "DeathNote:03005";
     public const string RecipientNotInvitedInAdvance = "DeathNote:03007";
-    public const string ReleaseNotReviewable = "DeathNote:03006";
-    public const string SameAdminCannotVoteTwice = "DeathNote:03007";
-    public const string SuperAdminCannotApprove = "DeathNote:03008";
     public const string ReleaseNotYetReleased = "DeathNote:03009";
-    public const string EvidenceTooLarge = "DeathNote:03010";
-    public const string ReleaseClosed = "DeathNote:03011";
 
     public const string EmailTemplateNotFound = "DeathNote:04001";
     public const string EmailTemplateUnknownPlaceholder = "DeathNote:04002";

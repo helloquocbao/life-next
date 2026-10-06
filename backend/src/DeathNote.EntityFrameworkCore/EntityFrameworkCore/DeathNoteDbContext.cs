@@ -1,7 +1,6 @@
 using DeathNote.AuditTrail;
 using DeathNote.Notifications;
 using DeathNote.Owners;
-using DeathNote.Releases;
 using DeathNote.Trustees;
 using DeathNote.Vaults;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +34,6 @@ public class DeathNoteDbContext : AbpDbContext<DeathNoteDbContext>
     public DbSet<Grant> Grants { get; set; }
     public DbSet<Trustee> Trustees { get; set; }
     public DbSet<UserKeyring> UserKeyrings { get; set; }
-    public DbSet<ReleaseRequest> ReleaseRequests { get; set; }
     public DbSet<AuditEvent> AuditEvents { get; set; }
     public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
@@ -151,55 +149,6 @@ public class DeathNoteDbContext : AbpDbContext<DeathNoteDbContext>
             b.Property(x => x.PublicKey).HasMaxLength(128).IsRequired();
             b.Property(x => x.EncryptedPrivateKey).HasMaxLength(512).IsRequired();
             b.Property(x => x.KdfSalt).HasMaxLength(128).IsRequired();
-        });
-
-        builder.Entity<ReleaseRequest>(b =>
-        {
-            b.ToTable(p + "ReleaseRequests", s);
-            b.ConfigureByConvention();
-            b.Property(x => x.Statement).HasMaxLength(4000);
-            b.Property(x => x.InfoRequestNote).HasMaxLength(2000);
-            b.Property(x => x.CloseNote).HasMaxLength(2000);
-            b.HasMany(x => x.Consents).WithOne().HasForeignKey(x => x.ReleaseRequestId).IsRequired();
-            b.HasMany(x => x.ShareDeliveries).WithOne().HasForeignKey(x => x.ReleaseRequestId).IsRequired();
-            b.HasMany(x => x.Evidence).WithOne().HasForeignKey(x => x.ReleaseRequestId).IsRequired();
-            b.HasMany(x => x.Votes).WithOne().HasForeignKey(x => x.ReleaseRequestId).IsRequired();
-            b.HasIndex(x => new { x.OwnerId, x.Status });
-            b.HasIndex(x => x.Status);
-        });
-
-        builder.Entity<ReleaseConsent>(b =>
-        {
-            b.ToTable(p + "ReleaseConsents", s);
-            b.ConfigureByConvention();
-            b.Property(x => x.IpAddress).HasMaxLength(64);
-            b.Property(x => x.UserAgent).HasMaxLength(512);
-            b.Property(x => x.Statement).HasMaxLength(2000);
-        });
-
-        builder.Entity<ShareDelivery>(b =>
-        {
-            b.ToTable(p + "ShareDeliveries", s);
-            b.ConfigureByConvention();
-            b.Property(x => x.SealedShare).HasMaxLength(1024).IsRequired();
-            b.HasIndex(x => x.ToTrusteeId);
-        });
-
-        builder.Entity<ReleaseEvidence>(b =>
-        {
-            b.ToTable(p + "ReleaseEvidence", s);
-            b.ConfigureByConvention();
-            b.Property(x => x.FileName).HasMaxLength(256).IsRequired();
-            b.Property(x => x.ContentType).HasMaxLength(128).IsRequired();
-            b.Property(x => x.BlobName).HasMaxLength(256).IsRequired();
-        });
-
-        builder.Entity<ReviewVote>(b =>
-        {
-            b.ToTable(p + "ReviewVotes", s);
-            b.ConfigureByConvention();
-            b.Property(x => x.AdminName).HasMaxLength(256).IsRequired();
-            b.Property(x => x.Note).HasMaxLength(2000);
         });
 
         builder.Entity<AuditEvent>(b =>

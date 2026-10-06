@@ -10,12 +10,62 @@
 #
 # Bí mật nằm trong .env và secrets/openiddict.pfx — KHÔNG commit (xem .env.example).
 # =============================================================================
+#
+# Sizing theo server hiện tại: 2 vCPU / 4 GB RAM (đủ cho ~10.000 user, ≈ 500 người dùng đồng thời):
+#   postgres ≤ 1.5 GB, api ≤ 1.25 GB, phần còn lại cho nginx + OS page cache.
+# Nâng lên 4 vCPU / 8 GB thì gấp đôi các giới hạn + shared_buffers/effective_cache_size/DB_MAX_POOL.
+# KHÔNG đặt deploy.resources.limits.cpus lớn hơn số CPU của máy — Docker sẽ từ chối khởi động container.
+# Server lớn/nhỏ hơn → chỉnh shared_buffers (~25% RAM dành cho postgres), effective_cache_size (~75%)
+# và DB_MAX_POOL (tổng pool của mọi instance api phải < max_connections).
+# =============================================================================
 name: lifenext
+
+# Docker mặc định ghi log container không giới hạn → đầy đĩa sau vài tuần chạy tải thật.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
 
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *default-logging
+    # Mặc định của image (shared_buffers 128 MB, max_connections 100) chỉ hợp cho dev.
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=384MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - min_wal_size=512MB
+      - -c
+      - max_wal_size=1GB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - random_page_cost=1.1          # SSD
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - log_min_duration_statement=500   # log query chậm > 500 ms để dò điểm nghẽn
+      - -c
+      - idle_in_transaction_session_timeout=60s
+    shm_size: 256mb   # /dev/shm mặc định 64 MB → lỗi "could not resize shared memory segment" khi query song song
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
@@ -31,6 +81,13 @@ services:
     build: ../../backend
     image: lifenext-api:latest
     restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1280m
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }   # mỗi kết nối HTTP/DB = 1 file descriptor
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,6 +97,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       # Tin header X-Forwarded-* từ nginx để OpenIddict nhận đúng scheme https / issuer.
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Server GC + giữ heap dưới giới hạn RAM của container (tránh bị OOM-kill khi tải đột biến).
+      DOTNET_gcServer: "1"
+      DOTNET_GCHeapHardLimitPercent: "0x4B"   # 75% (giá trị hex)
 
       App__SelfUrl: https://${API_DOMAIN:?}
       # EXTRA_CORS_ORIGINS: domain phụ cùng trỏ vào owner-web/admin-console (cách nhau dấu phẩy).
@@ -49,7 +109,8 @@ services:
       App__Clients__AppUrl: ${APP_URL}
       App__Clients__AdminUrl: ${ADMIN_URL}
 
-      ConnectionStrings__Default: Host=postgres;Port=5432;Database=DeathNote;Username=postgres;Password=${POSTGRES_PASSWORD}
+      # Pool Npgsql: tối đa DB_MAX_POOL kết nối/instance (phải < max_connections của postgres, chừa chỗ cho psql/backup).
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=DeathNote;Username=postgres;Password=${POSTGRES_PASSWORD};Maximum Pool Size=${DB_MAX_POOL:-60};Minimum Pool Size=10;Timeout=15;Command Timeout=30;Keepalive=30;Connection Idle Lifetime=300
 
       AuthServer__Authority: https://${API_DOMAIN}
       AuthServer__RequireHttpsMetadata: "true"

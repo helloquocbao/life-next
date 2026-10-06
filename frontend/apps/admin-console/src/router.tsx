@@ -9,7 +9,9 @@ import { AuthGate } from './auth/AuthGate';
 import { AdminLayout } from './layout/AdminLayout';
 import { HomeRedirect, RequirePermission } from './layout/RequirePermission';
 import { DashboardPage } from './pages/DashboardPage';
-import { QueuePage } from './pages/QueuePage';
+import { CustomersPage } from './pages/CustomersPage';
+import { StaffPage } from './pages/StaffPage';
+import { RolesPage } from './pages/RolesPage';
 import { AuditPage } from './pages/AuditPage';
 import { PolicyPage } from './pages/PolicyPage';
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage';
@@ -27,8 +29,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomeRedirect /> },
       { path: 'dashboard', element: <RequirePermission permission={Perm.Dashboard}><DashboardPage /></RequirePermission> },
-      { path: 'queue', element: <RequirePermission permission={Perm.Releases}><QueuePage /></RequirePermission> },
+      { path: 'customers', element: <RequirePermission permission={Perm.Customers}><CustomersPage /></RequirePermission> },
+      { path: 'staff', element: <RequirePermission permission={Perm.Staff}><StaffPage /></RequirePermission> },
       { path: 'audit', element: <RequirePermission permission={Perm.AuditLog}><AuditPage /></RequirePermission> },
+      { path: 'roles', element: <RequirePermission permission={Perm.Roles}><RolesPage /></RequirePermission> },
       { path: 'policy', element: <RequirePermission permission={Perm.Policy}><PolicyPage /></RequirePermission> },
       { path: 'email-templates', element: <RequirePermission permission={Perm.EmailTemplates}><EmailTemplatesPage /></RequirePermission> },
       { path: '*', element: <NotFoundPage /> },

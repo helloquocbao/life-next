@@ -1,10 +1,10 @@
 using DeathNote.Lifecycle;
 using DeathNote.Notifications;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundWorkers;
-using Volo.Abp.BlobStoring;
 using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
@@ -20,7 +20,7 @@ namespace DeathNote;
 /// Tầng Domain — nơi chứa TOÀN BỘ luật nghiệp vụ cốt lõi:
 /// <list type="bullet">
 /// <item>State machine vòng đời hồ sơ (<see cref="Owners.OwnerProfile"/>)</item>
-/// <item>Quy trình mở vault 4 cổng: thời gian, con người, bằng chứng, mật mã (<see cref="Releases.ReleaseRequest"/>)</item>
+/// <item>Tự động bàn giao cho người nhận khi hết thời gian ân hạn (<see cref="LifecycleManager"/>)</item>
 /// <item>Audit log append-only có chuỗi băm (<see cref="AuditTrail.AuditTrailManager"/>)</item>
 /// <item>Background worker tự động chuyển trạng thái theo thời gian (<see cref="LifecycleWorker"/>)</item>
 /// </list>
@@ -35,7 +35,6 @@ namespace DeathNote;
     typeof(AbpSettingManagementDomainModule),
     typeof(AbpAuditLoggingDomainModule),
     typeof(AbpEmailingModule),
-    typeof(AbpBlobStoringModule),
     typeof(AbpBackgroundWorkersModule)
 )]
 public class DeathNoteDomainModule : AbpModule
@@ -45,7 +44,14 @@ public class DeathNoteDomainModule : AbpModule
         var configuration = context.Services.GetConfiguration();
 
         // Chính sách vòng đời đọc từ appsettings: "DeathNote:Policy".
-        Configure<LifecyclePolicyOptions>(configuration.GetSection("DeathNote:Policy"));
+        var policySection = configuration.GetSection("DeathNote:Policy");
+        Configure<LifecyclePolicyOptions>(policySection);
+        // Binder NỐI mảng cấu hình vào giá trị mặc định (→ "push email sms call push email sms call") — thay hẳn bằng cấu hình.
+        PostConfigure<LifecyclePolicyOptions>(o =>
+        {
+            var channels = policySection.GetSection("ReminderChannels").Get<string[]>();
+            if (channels is { Length: > 0 }) o.ReminderChannels = channels;
+        });
 
         // Kênh gửi email: "Resend" (API key qua user-secrets / biến môi trường), để trống → SMTP.
         Configure<ResendOptions>(configuration.GetSection("Resend"));
@@ -56,7 +62,7 @@ public class DeathNoteDomainModule : AbpModule
 
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
     {
-        // Worker quét định kỳ: quá hạn check-in, leo thang nhắc, hết thời gian chờ cuối, xoá bằng chứng hết hạn.
+        // Worker quét định kỳ: quá hạn check-in, leo thang nhắc, hết ân hạn thì tự động bàn giao.
         await context.AddBackgroundWorkerAsync<LifecycleWorker>();
     }
 }
