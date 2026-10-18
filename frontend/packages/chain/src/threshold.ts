@@ -72,7 +72,10 @@ export class ThresholdCustodian implements HeirKeyCustodian {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `Nút ${sh.url} từ chối (${res.status})`);
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(err.error ?? `Nút ${sh.url} từ chối (${res.status})`);
+        }
         const { sealedShare } = (await res.json()) as { sealedShare: string };
         return s.crypto_box_seal_open(fromBase64(sealedShare), reply.publicKey, reply.privateKey);
       }),
