@@ -1,0 +1,14 @@
+# Node IPFS (Kubo) cho môi trường dev — lưu gói két ĐÃ MÃ HOÁ. Chạy: docker compose -f chain/docker-compose.yml up -d
+name: lifenext-chain
+services:
+  ipfs:
+    image: ipfs/kubo:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5011:5001"   # HTTP API (chỉ máy dev)
+      - "127.0.0.1:8088:8080"   # Gateway đọc
+    volumes:
+      - ipfs:/data/ipfs
+      - ./scripts/ipfs-cors.sh:/container-init.d/001-cors.sh:ro
+volumes:
+  ipfs:

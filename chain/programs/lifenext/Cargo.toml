@@ -18,6 +18,8 @@ idl-build = ["anchor-lang/idl-build"]
 anchor-debug = []
 custom-heap = []
 custom-panic = []
+# Nén thời gian cho bản trình diễn trên devnet (1 ngày = 4 giây). KHÔNG dùng cho mainnet.
+demo-time = []
 
 
 [dependencies]

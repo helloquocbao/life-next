@@ -13,7 +13,7 @@ use {
     solana_transaction::versioned::VersionedTransaction,
 };
 
-const DAY: i64 = 24 * 60 * 60;
+const DAY: i64 = lifenext::DAY_SECONDS;
 
 struct Env {
     svm: LiteSVM,

@@ -32,6 +32,10 @@ export const Context = {
   Allocation: 'dn:v1:allocation',
   Grant: 'dn:v1:grant',
   Keyring: 'dn:v1:keyring',
+  // Bản chạy trên Solana (frontend/packages/chain).
+  ChainMasterKey: 'ln:v1:chain-master-key',
+  ChainVaultKey: 'ln:v1:chain-vault-key',
+  ChainVault: 'ln:v1:chain-vault',
 } as const;
 export type ContextName = (typeof Context)[keyof typeof Context];
 

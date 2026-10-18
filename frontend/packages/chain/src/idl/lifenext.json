@@ -1,0 +1,897 @@
+{
+  "address": "CWUPdsmDTAGh22Q7MGNHg5YhUzk5WNkcxQ7FN2etfQNS",
+  "metadata": {
+    "name": "lifenext",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "heir",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "Vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "Vault"
+              },
+              {
+                "kind": "account",
+                "path": "vault.id",
+                "account": "Vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "address": "4hHj5bsNyVrXwJfwDPjdyoD2dJVxLHWNVTV7ULe8kCTa"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_profile",
+      "discriminator": [
+        167,
+        36,
+        181,
+        8,
+        136,
+        158,
+        46,
+        207
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "profile"
+          ]
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "profile"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_vault",
+      "discriminator": [
+        29,
+        237,
+        247,
+        208,
+        193,
+        82,
+        54,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "profile"
+          ]
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "profile.next_vault_id",
+                "account": "Profile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "heir",
+          "type": "pubkey"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "content_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete_vault",
+      "discriminator": [
+        99,
+        171,
+        186,
+        178,
+        201,
+        17,
+        81,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "profile",
+            "vault"
+          ]
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.id",
+                "account": "Vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_payer",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_profile",
+      "discriminator": [
+        210,
+        162,
+        212,
+        95,
+        95,
+        186,
+        89,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Người trả rent: A, hoặc ví tài trợ phí của hệ thống."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "pay",
+      "discriminator": [
+        119,
+        18,
+        216,
+        65,
+        192,
+        117,
+        122,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Ai trả tiền (thường là A). Có thể khác `owner`, nhưng `owner` vẫn phải ký: thanh toán = A xác nhận còn sống."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "profile"
+          ]
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "address": "4hHj5bsNyVrXwJfwDPjdyoD2dJVxLHWNVTV7ULe8kCTa"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "months",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "update_vault",
+      "discriminator": [
+        67,
+        229,
+        185,
+        188,
+        226,
+        11,
+        210,
+        60
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "vault.id",
+                "account": "Vault"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "heir",
+          "type": "pubkey"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "content_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Profile",
+      "discriminator": [
+        184,
+        101,
+        165,
+        188,
+        95,
+        63,
+        127,
+        188
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "Paid",
+      "discriminator": [
+        240,
+        193,
+        17,
+        238,
+        238,
+        210,
+        129,
+        235
+      ]
+    },
+    {
+      "name": "ProfileClosed",
+      "discriminator": [
+        240,
+        230,
+        21,
+        163,
+        106,
+        38,
+        166,
+        89
+      ]
+    },
+    {
+      "name": "VaultClaimed",
+      "discriminator": [
+        232,
+        48,
+        41,
+        194,
+        218,
+        163,
+        56,
+        86
+      ]
+    },
+    {
+      "name": "VaultDeleted",
+      "discriminator": [
+        89,
+        143,
+        126,
+        144,
+        12,
+        23,
+        165,
+        184
+      ]
+    },
+    {
+      "name": "VaultSaved",
+      "discriminator": [
+        100,
+        95,
+        2,
+        51,
+        177,
+        117,
+        123,
+        1
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMonths",
+      "msg": "Phải thanh toán ít nhất 1 tháng"
+    },
+    {
+      "code": 6001,
+      "name": "PrepayLimitExceeded",
+      "msg": "Chỉ được trả trước tối đa 90 ngày"
+    },
+    {
+      "code": 6002,
+      "name": "StillOverdue",
+      "msg": "Khoản thanh toán chưa đủ để che phần đã quá hạn"
+    },
+    {
+      "code": 6003,
+      "name": "NotReleasedYet",
+      "msg": "Chưa tới hạn bàn giao"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyClaimed",
+      "msg": "Két đã được người nhận lấy"
+    },
+    {
+      "code": 6005,
+      "name": "NotHeir",
+      "msg": "Người ký không phải người nhận của két này"
+    },
+    {
+      "code": 6006,
+      "name": "UriTooLong",
+      "msg": "Đường dẫn dữ liệu quá dài"
+    },
+    {
+      "code": 6007,
+      "name": "HeirIsOwner",
+      "msg": "Người nhận không được là chính chủ két"
+    },
+    {
+      "code": 6008,
+      "name": "VaultsRemaining",
+      "msg": "Còn két chưa xoá"
+    },
+    {
+      "code": 6009,
+      "name": "WrongTreasury",
+      "msg": "Sai ví nhận phí"
+    },
+    {
+      "code": 6010,
+      "name": "Overflow",
+      "msg": "Tràn số"
+    }
+  ],
+  "types": [
+    {
+      "name": "Paid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "months",
+            "type": "u16"
+          },
+          {
+            "name": "paid_until",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Profile",
+      "docs": [
+        "Hồ sơ của A (người dùng). Thanh toán = check-in: `paid_until` là mốc A đã trả tới."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "paid_until",
+            "docs": [
+              "A đã trả tới thời điểm này. Quá `paid_until + OVERDUE_SECONDS` mà chưa trả → bàn giao."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "debt_settled_for",
+            "docs": [
+              "`paid_until` tại lúc phần nợ đã được một người nhận trả — mỗi lần A ngừng trả chỉ thu nợ một lần."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "next_vault_id",
+            "type": "u32"
+          },
+          {
+            "name": "vault_count",
+            "type": "u32"
+          },
+          {
+            "name": "rent_payer",
+            "docs": [
+              "Ai đặt cọc rent (A hoặc ví tài trợ phí của hệ thống) → hoàn lại khi đóng."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProfileClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "docs": [
+        "Một két, giao cho đúng một người nhận (B). Nội dung đã mã hoá nằm ngoài chuỗi tại `uri`.",
+        "Thứ tự trường cố định ở đầu (owner, heir, claimed) để Lit đọc được theo offset."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "heir",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "id",
+            "type": "u32"
+          },
+          {
+            "name": "claimed_at",
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "type": "i64"
+          },
+          {
+            "name": "content_hash",
+            "docs": [
+              "SHA-256 của gói đã mã hoá — người nhận kiểm tra dữ liệu tải về không bị tráo."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "rent_payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "heir",
+            "type": "pubkey"
+          },
+          {
+            "name": "debt_paid",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultDeleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultSaved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "heir",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "PROFILE_SEED",
+      "type": "bytes",
+      "value": "[112, 114, 111, 102, 105, 108, 101]"
+    },
+    {
+      "name": "VAULT_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
+    }
+  ]
+}

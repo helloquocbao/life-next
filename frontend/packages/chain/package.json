@@ -1,0 +1,22 @@
+{
+  "name": "@deathnote/chain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "sync-idl": "cp ../../../chain/target/idl/lifenext.json src/idl/lifenext.json && cp ../../../chain/target/types/lifenext.ts src/idl/lifenext.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "^1.2.1",
+    "@deathnote/crypto": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -4,4 +4,6 @@ packages:
 
 # Chỉ cho phép các gói cần build script (esbuild tải binary theo nền tảng).
 allowBuilds:
+  bufferutil: set this to true or false
   esbuild: true
+  utf-8-validate: set this to true or false
