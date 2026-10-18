@@ -1,0 +1,35 @@
+{
+  "name": "@deathnote/chain-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5190 --strictPort",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview --port 5190",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "@deathnote/chain": "workspace:*",
+    "@deathnote/crypto": "workspace:*",
+    "@deathnote/ui": "workspace:*",
+    "@noble/curves": "^1.9.7",
+    "@solana/wallet-adapter-base": "^0.9.28",
+    "@solana/wallet-adapter-react": "^0.15.40",
+    "@solana/web3.js": "^1.98.4",
+    "@tanstack/react-query": "^5.103.2",
+    "antd": "^6.6.5",
+    "buffer": "^6.0.3",
+    "dayjs": "^1.11.23",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.0"
+  }
+}

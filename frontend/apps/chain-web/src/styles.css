@@ -1,0 +1,5 @@
+body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
+.chain-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #fff; border-bottom: 1px solid #ece8de; padding: 0 24px; }
+.chain-content { width: 100%; max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; box-sizing: border-box; }
+.chain-intro { text-align: center; padding: 48px 0; }
+@media (max-width: 600px) { .chain-header { padding: 0 12px; } }

@@ -132,11 +132,17 @@ export function createLifenext(connection: Connection, wallet: Wallet, cfg: Chai
       return vaultPda(owner, p ? p.nextVaultId : 0);
     },
 
+    /** Tạo két. Người dùng mới: tạo hồ sơ + trả tháng đầu (= check-in đầu tiên) trong cùng giao dịch. */
     async createVault(heir: PublicKey, uri: string, contentHash: Uint8Array): Promise<{ sig: string; vault: PublicKey }> {
       const owner = me();
       const pre: TransactionInstruction[] = [];
       const p = await program.account.profile.fetchNullable(profilePda(owner));
-      if (!p) pre.push(await program.methods.initProfile().accountsPartial({ payer: owner, owner, profile: profilePda(owner) }).instruction());
+      if (!p) {
+        pre.push(await program.methods.initProfile().accountsPartial({ payer: owner, owner, profile: profilePda(owner) }).instruction());
+        pre.push(await program.methods.pay(1)
+          .accountsPartial({ payer: owner, owner, profile: profilePda(owner), treasury, systemProgram: SystemProgram.programId })
+          .instruction());
+      }
       const vault = vaultPda(owner, p ? p.nextVaultId : 0);
       const sig = await program.methods
         .createVault(heir, uri, Array.from(contentHash))

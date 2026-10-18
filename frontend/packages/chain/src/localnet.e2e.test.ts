@@ -103,7 +103,7 @@ describe.skipIf(!RUN)('LifeNext trên localnet', () => {
     await expect(lnB.claim(onChain)).rejects.toThrow(/NotReleasedYet/);
     await expect(openAsHeir(parsePackage(bytes), custodian)).rejects.toThrow('chưa được bàn giao');
 
-    // Đợi tới hạn bàn giao (demo: quá hạn 30 ngày = 120 giây kể từ lúc tạo hồ sơ).
+    // Tạo két lần đầu đã trả tháng đầu → đợi hết tháng đó + 30 ngày quá hạn (demo: 240 giây).
     const profile = (await lnA.fetchProfile())!;
     for (;;) {
       const st = ownerStatus(cfg, profile.paidUntil, await lnB.chainNow());
@@ -114,5 +114,5 @@ describe.skipIf(!RUN)('LifeNext trên localnet', () => {
     await lnB.claim(onChain);
     expect((await connection.getBalance(new PublicKey(cfg.treasury))) - treasuryBefore).toBe(cfg.monthlyPriceLamports);
     expect(await openAsHeir(parsePackage(await store.get(onChain.uri)), custodian)).toEqual(content);
-  }, 240_000);
+  }, 360_000);
 });
