@@ -14,8 +14,12 @@ export type ChainConfig = {
   /** Phí thuê bao một tháng (lamports) — khớp `MONTHLY_PRICE_LAMPORTS`. */
   monthlyPriceLamports: number;
   storage: { kind: 'kubo'; apiUrl: string; gatewayUrl: string };
-  /** Ai giữ khoá két cho người nhận cho tới khi bàn giao. `dev-local` chỉ được phép trên localnet. */
-  heirKey: { kind: 'lit'; network: 'naga-dev' | 'naga-test' | 'naga' } | { kind: 'dev-local' };
+  /**
+   * Ai giữ khoá két cho người nhận cho tới khi bàn giao:
+   * - `threshold`: các nút mở khoá độc lập, cần `threshold` nút đồng ý (xem threshold.ts).
+   * - `dev-local`: không ai giữ — chỉ được phép trên localnet.
+   */
+  heirKey: { kind: 'threshold'; threshold: number; nodes: { url: string; publicKey: string }[] } | { kind: 'dev-local' };
 };
 
 export const daySeconds = (c: Pick<ChainConfig, 'demoTime'>) => (c.demoTime ? 4 : 24 * 60 * 60);

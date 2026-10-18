@@ -1,0 +1,26 @@
+{
+  "name": "@deathnote/release-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "N\u00fat m\u1edf kho\u00e1 LifeNext: gi\u1eef m\u1ed9t m\u1ea3nh kho\u00e1 cho ng\u01b0\u1eddi nh\u1eadn, ch\u1ec9 tr\u1ea3 khi k\u00e9t \u0111\u00e3 \u0111\u01b0\u1ee3c nh\u1eadn tr\u00ean Solana.",
+  "scripts": {
+    "start": "node src/server.ts",
+    "keygen": "node src/keygen.ts",
+    "dev": "node src/dev-cluster.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@solana/web3.js": "^1.98.4",
+    "libsodium-wrappers-sumo": "^0.8.4"
+  },
+  "devDependencies": {
+    "@deathnote/chain": "workspace:*",
+    "@types/libsodium-wrappers-sumo": "^0.8.2",
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -2,6 +2,15 @@ import { assertSafeConfig, type ChainConfig, type Cluster } from '@deathnote/cha
 
 const env = import.meta.env;
 
+/** "url|khoá công khai,url|khoá công khai,…" — khoá công khai của từng nút được ghim sẵn khi build. */
+function parseNodes(raw: string) {
+  return raw.split(',').filter(Boolean).map((item) => {
+    const [url, publicKey] = item.split('|');
+    if (!url || !publicKey) throw new Error('VITE_RELEASE_NODES sai định dạng (url|publicKey,…)');
+    return { url: url.trim(), publicKey: publicKey.trim() };
+  });
+}
+
 /** Cấu hình lấy từ biến môi trường build (xem .env.example). Mặc định: localnet dev. */
 export const config: ChainConfig = {
   cluster: (env.VITE_CLUSTER ?? 'localnet') as Cluster,
@@ -16,8 +25,8 @@ export const config: ChainConfig = {
     gatewayUrl: env.VITE_IPFS_GATEWAY ?? 'http://127.0.0.1:8088',
   },
   heirKey:
-    (env.VITE_HEIR_KEY ?? 'dev-local') === 'lit'
-      ? { kind: 'lit', network: (env.VITE_LIT_NETWORK ?? 'naga-dev') as 'naga-dev' }
+    (env.VITE_HEIR_KEY ?? 'dev-local') === 'threshold'
+      ? { kind: 'threshold', threshold: Number(env.VITE_RELEASE_THRESHOLD ?? 2), nodes: parseNodes(env.VITE_RELEASE_NODES ?? '') }
       : { kind: 'dev-local' },
 };
 

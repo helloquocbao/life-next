@@ -13,7 +13,8 @@
   "dependencies": {
     "@anchor-lang/core": "^1.2.1",
     "@deathnote/crypto": "workspace:*",
-    "@solana/web3.js": "^1.98.4"
+    "@solana/web3.js": "^1.98.4",
+    "shamir-secret-sharing": "^0.0.4"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

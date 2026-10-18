@@ -6,5 +6,6 @@ export * from './config';
 export * from './status';
 export * from './storage';
 export * from './heirKey';
+export * from './threshold';
 export * from './vaultCrypto';
 export * from './program';

@@ -1,12 +1,14 @@
 /**
- * Kiểm thử trọn luồng trên validator local + IPFS dev (chain/scripts/localnet.sh, chain/docker-compose.yml).
+ * Kiểm thử trọn luồng trên validator local + IPFS dev + 3 nút mở khoá (chain/scripts/localnet.sh,
+ * chain/docker-compose.yml, `pnpm --dir frontend/apps/release-node dev`).
  * Chạy: LOCALNET=1 pnpm --filter @deathnote/chain test   (~2,5 phút vì phải đợi tới hạn bàn giao ở bản demo-time)
  */
 import { describe, expect, it } from 'vitest';
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, type Transaction, type VersionedTransaction } from '@solana/web3.js';
 import type { Wallet } from '@anchor-lang/core';
 import type { ChainConfig } from './config';
-import { DevLocalCustodian } from './heirKey';
+import { getSodium } from '@deathnote/crypto';
+import { ThresholdCustodian, type ReleaseNode } from './threshold';
 import { createLifenext } from './program';
 import { ownerStatus } from './status';
 import { KuboStore } from './storage';
@@ -69,8 +71,15 @@ describe.skipIf(!RUN)('LifeNext trên localnet', () => {
     const b = await funded(connection);
     const lnA = createLifenext(connection, walletOf(a), cfg);
     const lnB = createLifenext(connection, walletOf(b), cfg);
-    const isClaimed = async (vault: string) => (await lnB.fetchVault(new PublicKey(vault)))?.claimed ?? false;
-    const custodian = new DevLocalCustodian(isClaimed);
+    // 3 nút mở khoá thật (ngưỡng 2): A niêm phong mảnh cho từng nút; B ký để xin lại.
+    const nodes: ReleaseNode[] = await Promise.all([7101, 7102, 7103].map(async (port) => {
+      const url = `http://127.0.0.1:${port}`;
+      const { publicKey } = (await (await fetch(`${url}/info`)).json()) as { publicKey: string };
+      return { url, publicKey };
+    }));
+    const s = await getSodium();
+    const custodian = new ThresholdCustodian(nodes, 2);
+    const heirCustodian = new ThresholdCustodian(nodes, 2, async (m) => s.crypto_sign_detached(m, b.secretKey));
 
     // A: khoá chủ từ chữ ký ví (ở đây ký giả lập bằng nacl qua Keypair) → mã hoá → IPFS → ghi lên chuỗi.
     const master = await deriveMasterKey(a.secretKey.slice(0, 32));
@@ -101,7 +110,7 @@ describe.skipIf(!RUN)('LifeNext trên localnet', () => {
     // B thấy két trong hộp nhận nhưng chưa nhận / chưa mở được.
     expect((await lnB.listHeirVaults()).map((v) => v.address.toBase58())).toContain(vault.toBase58());
     await expect(lnB.claim(onChain)).rejects.toThrow(/NotReleasedYet/);
-    await expect(openAsHeir(parsePackage(bytes), custodian)).rejects.toThrow('chưa được bàn giao');
+    await expect(openAsHeir(parsePackage(bytes), heirCustodian)).rejects.toThrow('Két chưa được bàn giao');
 
     // Tạo két lần đầu đã trả tháng đầu → đợi hết tháng đó + 30 ngày quá hạn (demo: 240 giây).
     const profile = (await lnA.fetchProfile())!;
@@ -113,6 +122,6 @@ describe.skipIf(!RUN)('LifeNext trên localnet', () => {
     const treasuryBefore = await connection.getBalance(new PublicKey(cfg.treasury));
     await lnB.claim(onChain);
     expect((await connection.getBalance(new PublicKey(cfg.treasury))) - treasuryBefore).toBe(cfg.monthlyPriceLamports);
-    expect(await openAsHeir(parsePackage(await store.get(onChain.uri)), custodian)).toEqual(content);
+    expect(await openAsHeir(parsePackage(await store.get(onChain.uri)), heirCustodian)).toEqual(content);
   }, 360_000);
 });

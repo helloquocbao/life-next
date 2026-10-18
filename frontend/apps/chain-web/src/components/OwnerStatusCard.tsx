@@ -1,6 +1,6 @@
 /** Trạng thái của A + thanh toán (thanh toán = check-in). */
 import { useState } from 'react';
-import { Alert, App, Button, Card, Descriptions, InputNumber, Space, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Descriptions, InputNumber, Skeleton, Space, Tag, Typography } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { config } from '../config';
 import { useOwnerStatus, usePay } from '../lib/hooks';
@@ -42,11 +42,13 @@ export function OwnerStatusCard() {
           Bạn chưa có hồ sơ. Lần thanh toán đầu (hoặc tạo két đầu tiên) sẽ tạo hồ sơ và trả tháng đầu. <b>Mỗi lần thanh toán là một lần check-in</b> — quá hạn{' '}
           {config.demoTime ? '30 ngày (bản demo: 2 phút)' : '30 ngày'} mà chưa trả thì các két được bàn giao cho người nhận.
         </Typography.Paragraph>
+      ) : !status ? (
+        <Skeleton active paragraph={{ rows: 2 }} />
       ) : (
         <Descriptions size="small" column={1} style={{ marginBottom: 12 }}
           items={[
             { key: 'paid', label: 'Đã trả tới', children: `${formatTime(profile.paidUntil)} (${now < profile.paidUntil ? `còn ${remaining(profile.paidUntil - now)}` : 'đã hết'})` },
-            { key: 'release', label: 'Bàn giao nếu không trả tiếp', children: `${formatTime(status!.releaseAt)} (${remaining(status!.releaseAt - now)})` },
+            { key: 'release', label: 'Bàn giao nếu không trả tiếp', children: `${formatTime(status.releaseAt)} (${remaining(status.releaseAt - now)})` },
           ]} />
       )}
       {status?.phase === 'released' && (

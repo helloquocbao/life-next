@@ -6,11 +6,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useAnchorWallet, useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import {
-  createLifenext, deriveMasterKey, DevLocalCustodian, KuboStore, masterKeyMessage,
+  createLifenext, deriveMasterKey, DevLocalCustodian, KuboStore, masterKeyMessage, ThresholdCustodian,
   type BlobStore, type HeirKeyCustodian, type Lifenext_Client,
 } from '@deathnote/chain';
 import { config } from '../config';
-import { LitCustodian } from './lit';
 
 type Session = {
   client: Lifenext_Client;
@@ -38,8 +37,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const client = createLifenext(connection, { ...anchorWallet, payer: undefined } as never, config);
     const isClaimed = async (vault: string) => (await client.fetchVault(new PublicKey(vault)))?.claimed ?? false;
     const custodian: HeirKeyCustodian =
-      config.heirKey.kind === 'lit'
-        ? new LitCustodian(config.heirKey.network, signMessage, anchorWallet.publicKey)
+      config.heirKey.kind === 'threshold'
+        ? new ThresholdCustodian(config.heirKey.nodes, config.heirKey.threshold, signMessage)
         : new DevLocalCustodian(isClaimed);
     return {
       client,

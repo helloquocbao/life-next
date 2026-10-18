@@ -13,7 +13,7 @@ export type HeirKeyContext = {
 };
 
 export type SealedHeirKey =
-  | { kind: 'lit'; network: string; ciphertext: string; dataToEncryptHash: string; conditions: unknown }
+  | { kind: 'threshold'; threshold: number; shares: { url: string; publicKey: string; sealed: string }[] }
   | { kind: 'dev-local'; key: string };
 
 export interface HeirKeyCustodian {
