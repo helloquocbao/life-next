@@ -9,7 +9,7 @@
 - A trả lại trước khi B lấy → huỷ bàn giao (két chưa lấy). B lấy rồi → không đảo ngược.
 - A muốn bỏ dịch vụ phải **tự xoá két** (ngừng trả = sẽ bàn giao). Xoá → hoàn cọc rent cho bên đã đặt cọc.
 - **Mất ví = mất két.** Không có quản trị, không khôi phục. Chương trình không có hàm admin, không nâng cấp.
-- Hệ thống thu thuê bao và trả mọi phí khác (rent, phí giao dịch, lưu trữ, Lit) — A, B chỉ trả thuê bao.
+- Hệ thống thu thuê bao và trả mọi phí khác (rent, phí giao dịch, lưu trữ, nút mở khoá) — A, B chỉ trả thuê bao.
 
 ## Thành phần
 | Thành phần | Cách làm |
